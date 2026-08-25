@@ -191,13 +191,13 @@ inline void bfs(int nos, int **mat, int vertice_inicial) {
 // ==========================================
 // BUSCA EM PROFUNDIDADE (DFS)
 // ==========================================
-inline void dfs(int nos, int **mat, int vertice_inicial) {
+inline void dfs(int nos, int **mat, int vertice_inicial, bool *visitados) {
     if (vertice_inicial < 1 || vertice_inicial > nos) {
         cout << "Vertice inicial invalido para DFS!" << endl;
         return;
     }
 
-    bool *visitados = new bool[nos];
+    *visitados = new bool[nos];
     for (int i = 0; i < nos; i++) {
         visitados[i] = false;
     }
@@ -230,8 +230,23 @@ inline void dfs(int nos, int **mat, int vertice_inicial) {
     }
 
     cout << endl;
-    delete[] visitados;
     p.deletarpilha();
+}
+
+inline void econexo(int nos, int **mat){
+bool *visitados;
+int vertice_inicial = 1;
+dfs(nos, mat, vertice_inicial, visitados);
+for(int i = 0; i < nos; i++){
+    if(!visitados[i]){
+        cout << "O grafo nao e conexo." << endl;
+        delete[] visitados;
+        return;
+    }else{
+        cout << "O grafo e conexo." << endl;
+        delete[] visitados;
+        return;
+    }
 }
 
 #endif
