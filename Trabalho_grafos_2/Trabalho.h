@@ -1,6 +1,7 @@
 #ifndef TRABALHO_H
 #define TRABALHO_H
 
+#include <limits>
 #include <iostream>
 using namespace std;
 
@@ -571,5 +572,12 @@ void mostrar_grafo()
     }
 }
 
+};
+
+void system_pause()
+{
+    cout << "Pressione enter para continuar...";
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    cin.get();
 };
 #endif

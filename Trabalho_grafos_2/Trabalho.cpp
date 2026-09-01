@@ -154,7 +154,6 @@ int main()
             }
 
             cout << "===== ADICIONAR CONEXOES =====" << endl;
-
             if (eh_dirigido)
             {
                 cout << "Formato: ORIGEM -> DESTINO" << endl;
@@ -169,6 +168,7 @@ int main()
 
             while (true)
             {
+                g.mostrar_grafo();
                 cout << "\nPrimeiro vertice: ";
                 cin >> a;
 
@@ -213,6 +213,7 @@ int main()
                          << a << " - " << b
                          << " criada!" << endl;
                 }
+                system("clear");
             }
 
             break;
@@ -230,12 +231,11 @@ int main()
             }
 
             cout << "===== REMOVER CONEXOES =====" << endl;
-
-            cout << "Digite -1 como primeiro vertice "
-                 << "para voltar ao menu." << endl;
-
+            
             while (true)
             {
+                cout << "Digite -1 como primeiro vertice " << "para voltar ao menu." << endl;
+                g.mostrar_grafo();
                 cout << "\nPrimeiro vertice: ";
                 cin >> a;
 
@@ -269,6 +269,7 @@ int main()
                 g.remove_conexao(a, b);
 
                 cout << "Conexao removida!" << endl;
+                system("clear");
             }
 
             break;
@@ -286,6 +287,7 @@ int main()
             }
 
             g.mostrar_grafo();
+            system_pause();
 
             break;
         }
@@ -310,7 +312,7 @@ int main()
                 break;
 
             g.bfs(vertice);
-
+            system_pause();
             break;
         }
 
@@ -334,7 +336,7 @@ int main()
                 break;
 
             g.dfs(vertice);
-
+            system_pause();
             break;
         }
 
@@ -358,7 +360,7 @@ int main()
                 break;
 
             g.fecho_transitivo_direto(vertice);
-
+            system_pause();
             break;
         }
 
@@ -382,7 +384,8 @@ int main()
                 break;
 
             g.fecho_transitivo_inverso(vertice);
-
+            cout << "Pressione espaco para continuar...";
+            cin.get();
             break;
         }
 
@@ -408,7 +411,8 @@ int main()
             }
 
             g.componentes_fortemente_conexos();
-
+            cout << "Pressione espaco para continuar...";
+            cin.get();
             break;
         }
 
