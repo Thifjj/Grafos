@@ -27,14 +27,15 @@ int main()
 
         cout << "1  - Criar grafo" << endl;
         cout << "2  - Adicionar vertices" << endl;
-        cout << "3  - Adicionar conexoes" << endl;
-        cout << "4  - Remover conexoes" << endl;
-        cout << "5  - Mostrar matriz de adjacencia" << endl;
-        cout << "6  - Busca em largura (BFS)" << endl;
-        cout << "7  - Busca em profundidade (DFS)" << endl;
-        cout << "8  - Fecho transitivo direto" << endl;
-        cout << "9  - Fecho transitivo inverso" << endl;
-        cout << "10 - Componentes fortemente conexos" << endl;
+        cout << "3  - Remover vertice" << endl;
+        cout << "4  - Adicionar conexoes" << endl;
+        cout << "5  - Remover conexoes" << endl;
+        cout << "6  - Mostrar matriz de adjacencia" << endl;
+        cout << "7  - Busca em largura (BFS)" << endl;
+        cout << "8  - Busca em profundidade (DFS)" << endl;
+        cout << "9  - Fecho transitivo direto" << endl;
+        cout << "10 - Fecho transitivo inverso" << endl;
+        cout << "11 - Verificar conectividade / SFCMs" << endl;
         cout << "0  - Sair" << endl;
 
         cout << "\nEscolha uma opcao: ";
@@ -54,6 +55,7 @@ int main()
                 cout << "Ja existe um grafo criado!" << endl;
                 cout << "Adicione ou remova vertices/conexoes "
                      << "utilizando o menu." << endl;
+                system_pause();
                 break;
             }
 
@@ -87,7 +89,8 @@ int main()
                 cout << "Tipo: nao dirigido" << endl;
 
             cout << "Vertices: " << nos << endl;
-
+            system_pause();
+            limpar_tela();
             break;
         }
 
@@ -99,6 +102,7 @@ int main()
             if (!grafo_criado)
             {
                 cout << "Primeiro crie um grafo!" << endl;
+                system_pause();
                 break;
             }
 
@@ -111,21 +115,18 @@ int main()
                 cout << "\nQuantidade: ";
                 cin >> comando;
 
-                // Sai da opcao
                 if (comando == -1)
                 {
                     cout << "Voltando ao menu..." << endl;
                     break;
                 }
 
-                // Nao permite zero ou valores negativos
                 if (comando <= 0)
                 {
                     cout << "Quantidade invalida!" << endl;
                     continue;
                 }
 
-                // Cria a quantidade solicitada
                 for (int i = 0; i < comando; i++)
                 {
                     g.cria_vertice();
@@ -138,14 +139,67 @@ int main()
                 cout << "Total de vertices: "
                      << nos << endl;
             }
+            system_pause();
+            limpar_tela();
+            break;
+        }
 
+        // ==========================================
+        // REMOVER VERTICE
+        // ==========================================
+        case 3:
+        {
+            if (!grafo_criado)
+            {
+                cout << "Primeiro crie um grafo!" << endl;
+                system_pause();
+                break;
+            }
+
+            cout << "===== REMOVER VERTICE =====" << endl;
+
+            while (true)
+            {
+                g.mostrar_grafo();
+
+                cout << "\nVertice que deseja remover "
+                     << "(-1 para voltar): ";
+
+                cin >> vertice;
+
+                if (vertice == -1)
+                {
+                    cout << "Voltando ao menu..." << endl;
+                    break;
+                }
+
+                if (!g.vertice_valido(vertice))
+                {
+                    cout << "Vertice invalido!" << endl;
+                    continue;
+                }
+
+                g.remove_vertice(vertice);
+                nos--;
+
+                cout << "Vertice removido com sucesso!" << endl;
+                cout << "Total de vertices: " << nos << endl;
+
+                if (nos == 0)
+                {
+                    cout << "O grafo nao possui mais vertices." << endl;
+                    break;
+                }
+            }
+            system_pause();
+            limpar_tela();
             break;
         }
 
         // ==========================================
         // ADICIONAR CONEXOES
         // ==========================================
-        case 3:
+        case 4:
         {
             if (!grafo_criado)
             {
@@ -153,15 +207,18 @@ int main()
                 break;
             }
 
+            if (nos == 0)
+            {
+                cout << "O grafo nao possui vertices!" << endl;
+                break;
+            }
+
             cout << "===== ADICIONAR CONEXOES =====" << endl;
+
             if (eh_dirigido)
-            {
                 cout << "Formato: ORIGEM -> DESTINO" << endl;
-            }
             else
-            {
                 cout << "Formato: VERTICE A - VERTICE B" << endl;
-            }
 
             cout << "Digite -1 como primeiro vertice "
                  << "para voltar ao menu." << endl;
@@ -169,6 +226,7 @@ int main()
             while (true)
             {
                 g.mostrar_grafo();
+
                 cout << "\nPrimeiro vertice: ";
                 cin >> a;
 
@@ -213,16 +271,16 @@ int main()
                          << a << " - " << b
                          << " criada!" << endl;
                 }
-                system("clear");
             }
-
+            system_pause();
+            limpar_tela();
             break;
         }
 
         // ==========================================
         // REMOVER CONEXOES
         // ==========================================
-        case 4:
+        case 5:
         {
             if (!grafo_criado)
             {
@@ -230,12 +288,21 @@ int main()
                 break;
             }
 
+            if (nos == 0)
+            {
+                cout << "O grafo nao possui vertices!" << endl;
+                break;
+            }
+
             cout << "===== REMOVER CONEXOES =====" << endl;
-            
+
             while (true)
             {
-                cout << "Digite -1 como primeiro vertice " << "para voltar ao menu." << endl;
+                cout << "Digite -1 como primeiro vertice "
+                     << "para voltar ao menu." << endl;
+
                 g.mostrar_grafo();
+
                 cout << "\nPrimeiro vertice: ";
                 cin >> a;
 
@@ -269,16 +336,16 @@ int main()
                 g.remove_conexao(a, b);
 
                 cout << "Conexao removida!" << endl;
-                system("clear");
             }
-
+            system_pause();
+            limpar_tela();
             break;
         }
 
         // ==========================================
         // MOSTRAR GRAFO
         // ==========================================
-        case 5:
+        case 6:
         {
             if (!grafo_criado)
             {
@@ -288,18 +355,18 @@ int main()
 
             g.mostrar_grafo();
             system_pause();
-
+            limpar_tela();
             break;
         }
 
         // ==========================================
         // BFS
         // ==========================================
-        case 6:
+        case 7:
         {
-            if (!grafo_criado)
+            if (!grafo_criado || nos == 0)
             {
-                cout << "Primeiro crie um grafo!" << endl;
+                cout << "O grafo nao possui vertices!" << endl;
                 break;
             }
 
@@ -312,18 +379,20 @@ int main()
                 break;
 
             g.bfs(vertice);
+
             system_pause();
+            limpar_tela();
             break;
         }
 
         // ==========================================
         // DFS
         // ==========================================
-        case 7:
+        case 8:
         {
-            if (!grafo_criado)
+            if (!grafo_criado || nos == 0)
             {
-                cout << "Primeiro crie um grafo!" << endl;
+                cout << "O grafo nao possui vertices!" << endl;
                 break;
             }
 
@@ -336,18 +405,20 @@ int main()
                 break;
 
             g.dfs(vertice);
+
             system_pause();
+            limpar_tela();
             break;
         }
 
         // ==========================================
         // FECHO TRANSITIVO DIRETO
         // ==========================================
-        case 8:
+        case 9:
         {
-            if (!grafo_criado)
+            if (!grafo_criado || nos == 0)
             {
-                cout << "Primeiro crie um grafo!" << endl;
+                cout << "O grafo nao possui vertices!" << endl;
                 break;
             }
 
@@ -360,18 +431,20 @@ int main()
                 break;
 
             g.fecho_transitivo_direto(vertice);
+
             system_pause();
+            limpar_tela();
             break;
         }
 
         // ==========================================
         // FECHO TRANSITIVO INVERSO
         // ==========================================
-        case 9:
+        case 10:
         {
-            if (!grafo_criado)
+            if (!grafo_criado || nos == 0)
             {
-                cout << "Primeiro crie um grafo!" << endl;
+                cout << "O grafo nao possui vertices!" << endl;
                 break;
             }
 
@@ -384,35 +457,39 @@ int main()
                 break;
 
             g.fecho_transitivo_inverso(vertice);
-            cout << "Pressione espaco para continuar...";
-            cin.get();
+
+            system_pause();
+            limpar_tela();
             break;
         }
 
         // ==========================================
-        // COMPONENTES FORTEMENTE CONEXOS
+        // CONECTIVIDADE / SFCMs
         // ==========================================
-        case 10:
+        case 11:
         {
-            if (!grafo_criado)
+            if (!grafo_criado || nos == 0)
             {
-                cout << "Primeiro crie um grafo!" << endl;
+                cout << "O grafo nao possui vertices!" << endl;
                 break;
             }
+
+            cout << "===== CONECTIVIDADE DO GRAFO =====" << endl;
 
             if (!eh_dirigido)
             {
                 cout << "O grafo nao e dirigido." << endl;
-                cout << "Componentes fortemente conexos "
-                     << "sao utilizados em grafos dirigidos."
-                     << endl;
+                cout << "A verificacao atual de SFCMs "
+                     << "e utilizada para grafos dirigidos." << endl;
 
+                system_pause();
                 break;
             }
 
             g.componentes_fortemente_conexos();
-            cout << "Pressione espaco para continuar...";
-            cin.get();
+
+            system_pause();
+            limpar_tela();
             break;
         }
 

@@ -200,6 +200,62 @@ void cria_vertice() {
     // Atualiza quantidade de nós
     this->nos = novo_tamanho;
 }
+void remove_vertice(int vertice) {
+    if (!vertice_valido(vertice))
+    {
+        cout << "Vertice invalido!" << endl;
+        return;
+    }
+    int indice_remocao = vertice - 1; // Ajusta para índice baseado em 0
+    int novo_tamanho = this->nos - 1;
+
+    // Cria nova matriz menor
+    int **nova_matriz = new int*[novo_tamanho];
+
+    for (int i = 0; i < novo_tamanho; i++) {
+        nova_matriz[i] = new int[novo_tamanho];
+    }
+
+    // Zera a nova matriz
+    for (int i = 0; i < novo_tamanho; i++) {
+        for (int j = 0; j < novo_tamanho; j++) {
+            nova_matriz[i][j] = 0;
+        }
+    }
+
+    int nova_linha = 0;
+
+    for (int i = 0; i < this->nos; i++)
+    {
+        if (i == indice_remocao)
+            continue;
+
+        int nova_coluna = 0;
+
+        for (int j = 0; j < this->nos; j++)
+        {
+            if (j == indice_remocao)
+                continue;
+
+            nova_matriz[nova_linha][nova_coluna] =
+                this->matriz_adjacencia[i][j];
+
+            nova_coluna++;
+        }
+
+        nova_linha++;
+    }
+
+    for (int i = 0; i < this->nos; i++)
+    {
+        delete[] this->matriz_adjacencia[i];
+    }
+
+    delete[] this->matriz_adjacencia;
+
+    this->matriz_adjacencia = nova_matriz;
+    this->nos = novo_tamanho;
+}
 //cria conexao (aresta/arco)
 void cria_conexao(int a, int b){
     if(vertice_valido(a) && vertice_valido(b)){
@@ -361,15 +417,13 @@ void calcula_fecho(int origem, bool inverso, int *nivel)
             {
                 // Fecho direto
                 // atual -> i
-                possui_conexao =
-                    this->matriz_adjacencia[atual][i] == 1;
+                possui_conexao = this->matriz_adjacencia[atual][i] == 1;
             }
             else
             {
                 // Fecho inverso
                 // i -> atual
-                possui_conexao =
-                    this->matriz_adjacencia[i][atual] == 1;
+                possui_conexao = this->matriz_adjacencia[i][atual] == 1;
             }
 
             if (possui_conexao && nivel[i] == -1)
@@ -394,14 +448,9 @@ void fecho_transitivo_direto(int vertice_inicial)
 
     int *nivel = new int[this->nos];
 
-    calcula_fecho(
-        vertice_inicial - 1,
-        false,
-        nivel
-    );
+    calcula_fecho(vertice_inicial - 1, false, nivel);
 
-    cout << "\nFecho Transitivo Direto de "
-         << vertice_inicial << endl;
+    cout << "\nFecho Transitivo Direto de " << vertice_inicial << endl;
 
     cout << "Vertice\tNivel" << endl;
 
@@ -430,14 +479,9 @@ void fecho_transitivo_inverso(int vertice_inicial)
 
     int *nivel = new int[this->nos];
 
-    calcula_fecho(
-        vertice_inicial - 1,
-        true,
-        nivel
-    );
+    calcula_fecho(vertice_inicial - 1, true, nivel);
 
-    cout << "\nFecho Transitivo Inverso de "
-         << vertice_inicial << endl;
+    cout << "\nFecho Transitivo Inverso de " << vertice_inicial << endl;
 
     cout << "Vertice\tNivel" << endl;
 
@@ -485,17 +529,6 @@ void componentes_fortemente_conexos()
         calcula_fecho(v, false, direto);
         calcula_fecho(v, true, inverso);
 
-        /*
-            Se o vertice aparece nos dois fechamentos:
-
-            v consegue chegar em i
-                    E
-            i consegue chegar em v
-
-            Portanto pertencem ao mesmo
-            componente fortemente conexo.
-        */
-
         for (int i = 0; i < this->nos; i++)
         {
             if (direto[i] != -1 &&
@@ -511,9 +544,7 @@ void componentes_fortemente_conexos()
         delete[] inverso;
     }
 
-    cout << "\n==============================" << endl;
     cout << "COMPONENTES FORTEMENTE CONEXOS" << endl;
-    cout << "==============================" << endl;
 
     for (int c = 0; c < quantidade_componentes; c++)
     {
@@ -580,4 +611,12 @@ void system_pause()
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
     cin.get();
 };
+void limpar_tela()
+{
+#ifdef _WIN32
+    system("cls");
+#else
+    system("clear");
+#endif
+}
 #endif
