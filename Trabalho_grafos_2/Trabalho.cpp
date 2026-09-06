@@ -53,8 +53,7 @@ int main()
             if (grafo_criado)
             {
                 cout << "Ja existe um grafo criado!" << endl;
-                cout << "Adicione ou remova vertices/conexoes "
-                     << "utilizando o menu." << endl;
+                cout << "Adicione ou remova vertices/conexoes " << "utilizando o menu." << endl;
                 system_pause();
                 break;
             }
@@ -162,8 +161,7 @@ int main()
             {
                 g.mostrar_grafo();
 
-                cout << "\nVertice que deseja remover "
-                     << "(-1 para voltar): ";
+                cout << "\nVertice que deseja remover " << "(-1 para voltar): ";
 
                 cin >> vertice;
 
@@ -220,8 +218,7 @@ int main()
             else
                 cout << "Formato: VERTICE A - VERTICE B" << endl;
 
-            cout << "Digite -1 como primeiro vertice "
-                 << "para voltar ao menu." << endl;
+            cout << "Digite -1 como primeiro vertice " << "para voltar ao menu." << endl;
 
             while (true)
             {
@@ -369,16 +366,13 @@ int main()
                 cout << "O grafo nao possui vertices!" << endl;
                 break;
             }
-
             cout << "===== BUSCA EM LARGURA =====" << endl;
 
             cout << "Vertice inicial (-1 para voltar): ";
             cin >> vertice;
-
-            if (vertice == -1)
-                break;
-
-            g.bfs(vertice);
+            if(g.vertice_valido(vertice)){
+                g.bfs(vertice);
+            }
 
             system_pause();
             limpar_tela();
@@ -400,11 +394,9 @@ int main()
 
             cout << "Vertice inicial (-1 para voltar): ";
             cin >> vertice;
-
-            if (vertice == -1)
-                break;
-
-            g.dfs(vertice);
+            if(g.vertice_valido(vertice)){
+                g.dfs(vertice);
+            }
 
             system_pause();
             limpar_tela();
@@ -427,10 +419,9 @@ int main()
             cout << "Vertice (-1 para voltar): ";
             cin >> vertice;
 
-            if (vertice == -1)
-                break;
-
-            g.fecho_transitivo_direto(vertice);
+            if(g.vertice_valido(vertice)){
+                g.fecho_transitivo_direto(vertice);
+            }
 
             system_pause();
             limpar_tela();
@@ -453,10 +444,9 @@ int main()
             cout << "Vertice (-1 para voltar): ";
             cin >> vertice;
 
-            if (vertice == -1)
-                break;
-
-            g.fecho_transitivo_inverso(vertice);
+            if(g.vertice_valido(vertice)){
+                g.fecho_transitivo_inverso(vertice);
+            }
 
             system_pause();
             limpar_tela();
@@ -471,22 +461,21 @@ int main()
             if (!grafo_criado || nos == 0)
             {
                 cout << "O grafo nao possui vertices!" << endl;
+                system_pause();
+                limpar_tela();
                 break;
             }
 
             cout << "===== CONECTIVIDADE DO GRAFO =====" << endl;
 
-            if (!eh_dirigido)
+            if (eh_dirigido)
             {
-                cout << "O grafo nao e dirigido." << endl;
-                cout << "A verificacao atual de SFCMs "
-                     << "e utilizada para grafos dirigidos." << endl;
-
-                system_pause();
-                break;
+                g.componentes_fortemente_conexos();
             }
-
-            g.componentes_fortemente_conexos();
+            else
+            {
+                g.componentes_conexos();
+            }
 
             system_pause();
             limpar_tela();

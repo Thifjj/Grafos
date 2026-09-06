@@ -580,6 +580,81 @@ void componentes_fortemente_conexos()
     delete[] componente;
 }
 
+void componentes_conexos()
+{
+    if (this->dirigido)
+    {
+        cout << "O grafo e dirigido." << endl;
+        cout << "Utilize componentes fortemente conexos." << endl;
+        return;
+    }
+
+    int *componente = new int[this->nos];
+
+    for (int i = 0; i < this->nos; i++)
+    {
+        componente[i] = -1;
+    }
+
+    int quantidade_componentes = 0;
+
+    for (int v = 0; v < this->nos; v++)
+    {
+        if (componente[v] != -1)
+            continue;
+
+        int *direto = new int[this->nos];
+
+        calcula_fecho(v, false, direto);
+
+        for (int i = 0; i < this->nos; i++)
+        {
+            if (direto[i] != -1)
+            {
+                componente[i] = quantidade_componentes;
+            }
+        }
+
+        quantidade_componentes++;
+
+        delete[] direto;
+    }
+
+    cout << "COMPONENTES CONEXOS" << endl;
+
+    for (int c = 0; c < quantidade_componentes; c++)
+    {
+        cout << "Componente " << c + 1 << ": { ";
+
+        for (int i = 0; i < this->nos; i++)
+        {
+            if (componente[i] == c)
+            {
+                cout << i + 1 << " ";
+            }
+        }
+
+        cout << "}" << endl;
+    }
+
+    cout << endl;
+
+    if (quantidade_componentes == 1)
+    {
+        cout << "O grafo e CONEXO." << endl;
+        this->conexo = true;
+    }
+    else
+    {
+        cout << "O grafo NAO e conexo." << endl;
+        cout << "Quantidade de componentes conexos: " << quantidade_componentes << endl;
+
+        this->conexo = false;
+    }
+
+    delete[] componente;
+}
+
 void mostrar_grafo()
 {
     cout << "\nMatriz de adjacencia:\n\n";
