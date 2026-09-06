@@ -1,71 +1,101 @@
 # Trabalho de Grafos
 
-Programa desenvolvido em **C++** para criação, modificação, visualização e análise de grafos por meio de uma **matriz de adjacência dinâmica**.
+Implementação em **C++** de um sistema interativo para criação, modificação, visualização e análise de grafos utilizando uma **matriz de adjacência dinâmica**.
 
-O sistema permite trabalhar com grafos dirigidos e não dirigidos, incluir ou remover vértices e conexões durante a execução, percorrer o grafo utilizando BFS e DFS, calcular fechos transitivos e analisar componentes fortemente conexos.
+O projeto permite trabalhar com grafos dirigidos e não dirigidos, adicionar e remover vértices e conexões durante a execução, executar BFS e DFS, calcular fechos transitivos e identificar Componentes Fortemente Conexos Máximos.
 
-Esta documentação concentra-se exclusivamente em:
+**Repositório:** `https://github.com/Thifjj/Grafos`
 
-- `main.cpp`
-- classe `grafo`, definida em `Trabalho.h`
+Esta documentação concentra-se principalmente em:
 
-As estruturas auxiliares utilizadas internamente pelos algoritmos não são detalhadas neste documento.
+- `Trabalho.cpp` — contém a função `main()` e toda a interface do programa;
+- `Trabalho.h` — contém a classe `grafo` e sua implementação.
 
 ---
 
-## 1. Funcionalidades do projeto
+## Sumário
 
-O programa disponibiliza as seguintes operações:
+1. [Funcionalidades](#1-funcionalidades)
+2. [Estrutura do projeto](#2-estrutura-do-projeto)
+3. [Representação do grafo](#3-representação-do-grafo)
+4. [Classe `grafo`](#4-classe-grafo)
+5. [Atributos da classe](#5-atributos-da-classe-grafo)
+6. [Métodos da classe](#6-métodos-da-classe-grafo)
+7. [Busca em Largura — BFS](#7-busca-em-largura--bfs)
+8. [Busca em Profundidade — DFS](#8-busca-em-profundidade--dfs)
+9. [Cálculo de fechos](#9-cálculo-de-fechos)
+10. [Fecho Transitivo Direto](#10-fecho-transitivo-direto)
+11. [Fecho Transitivo Inverso](#11-fecho-transitivo-inverso)
+12. [Componentes Fortemente Conexos](#12-componentes-fortemente-conexos-máximos)
+13. [Visualização da matriz](#13-visualização-da-matriz)
+14. [`Trabalho.cpp`](#14-trabalhocpp)
+15. [Menu e opções](#16-menu-principal)
+16. [Compilação](#21-compilação)
+17. [Resumo](#22-resumo-dos-métodos-da-classe-grafo)
+
+---
+
+## 1. Funcionalidades
+
+O programa disponibiliza:
 
 - criação de grafo dirigido ou não dirigido;
 - definição da quantidade inicial de vértices;
-- adição de novos vértices;
-- remoção de vértices;
-- adição de arestas ou arcos;
-- remoção de arestas ou arcos;
+- adição e remoção de vértices;
+- adição e remoção de arestas ou arcos;
 - visualização da matriz de adjacência;
-- busca em largura — BFS;
-- busca em profundidade — DFS;
-- cálculo do fecho transitivo direto;
-- cálculo do fecho transitivo inverso;
-- identificação dos Componentes Fortemente Conexos Máximos — SFCMs;
-- verificação de conectividade forte para grafos dirigidos.
+- Busca em Largura — BFS;
+- Busca em Profundidade — DFS;
+- fecho transitivo direto;
+- fecho transitivo inverso;
+- identificação de Componentes Fortemente Conexos Máximos — SFCMs;
+- verificação de conectividade forte em grafos dirigidos.
 
 ---
 
-# 2. Estrutura dos arquivos
+## 2. Estrutura do projeto
+
+No repositório, a implementação atual está em:
 
 ```text
-Projeto/
-├── main.cpp
-└── Trabalho.h
+Grafos/
+└── Trabalho_grafos_2/
+    ├── Trabalho.cpp
+    ├── Trabalho.h
+    ├── README.md
+    ├── Criador_grafos
+    └── Criador_grafos.exe
 ```
 
-### `main.cpp`
+### `Trabalho.cpp`
 
-Responsável pela interação com o usuário.
+Arquivo principal da aplicação. Ele contém:
 
-Contém:
+```cpp
+int main()
+```
 
-- criação do objeto `grafo`;
-- menu principal;
-- leitura das opções;
-- validações de entrada;
-- chamadas aos métodos da classe `grafo`;
-- controle da quantidade de vértices utilizada pela interface.
+e é responsável por:
+
+- criar o objeto `grafo`;
+- exibir o menu;
+- ler as entradas do usuário;
+- validar operações;
+- chamar os métodos da classe `grafo`;
+- controlar o fluxo geral da aplicação.
+
+> A função de entrada continua sendo `main()`, porém ela está definida no arquivo `Trabalho.cpp`. Portanto, os comandos de compilação devem usar `Trabalho.cpp`, não `main.cpp`.
 
 ### `Trabalho.h`
 
-Contém a definição da classe `grafo` e sua implementação.
+Contém a classe `grafo` e a implementação dos métodos responsáveis pela representação, edição e análise do grafo.
 
-A classe é responsável por:
+### Executáveis
 
-- armazenar o grafo;
-- modificar sua estrutura;
-- executar os algoritmos de busca;
-- calcular fechos transitivos;
-- determinar componentes fortemente conexos;
-- apresentar a matriz de adjacência.
+```text
+Criador_grafos      -> Linux
+Criador_grafos.exe  -> Windows
+```
 
 ---
 
@@ -300,7 +330,7 @@ false
 
 quando o vértice está fora do intervalo válido.
 
-Essa função é utilizada pelo `main.cpp` e por outros métodos da classe para evitar acessos inválidos à matriz.
+Essa função é utilizada pelo `Trabalho.cpp` e por outros métodos da classe para evitar acessos inválidos à matriz.
 
 ---
 
@@ -959,9 +989,9 @@ Essa visualização é utilizada tanto para consultar o grafo quanto para auxili
 
 ---
 
-# 14. `main.cpp`
+# 14. `Trabalho.cpp`
 
-O arquivo `main.cpp` é responsável pela interface do programa.
+O arquivo `Trabalho.cpp` é responsável pela interface do programa.
 
 O fluxo geral é:
 
@@ -989,7 +1019,7 @@ Opção 0 encerra o programa
 
 ---
 
-# 15. Variáveis utilizadas no `main`
+# 15. Variáveis utilizadas no `Trabalho.cpp`
 
 ## `grafo g`
 
@@ -1020,7 +1050,7 @@ Armazena a opção escolhida no menu principal.
 
 ## `int nos`
 
-Mantém no `main` a quantidade de vértices apresentada ao usuário.
+Mantém no `Trabalho` a quantidade de vértices apresentada ao usuário.
 
 Esse valor também é atualizado ao adicionar ou remover vértices.
 
@@ -1078,7 +1108,7 @@ Isso impede que determinadas operações sejam executadas antes da criação do 
 
 ## `bool eh_dirigido`
 
-Mantém no `main` a informação sobre o tipo do grafo.
+Mantém no `Trabalho` a informação sobre o tipo do grafo.
 
 É usada principalmente para:
 
@@ -1129,7 +1159,7 @@ switch (opcao)
 
 ---
 
-# 17. Opções do `main`
+# 17. Opções do `Trabalho.cpp`
 
 ## Opção 1 — Criar grafo
 
@@ -1176,7 +1206,7 @@ Exemplo:
 Quantidade: 5
 ```
 
-O `main` executa:
+O `Trabalho` executa:
 
 ```cpp
 for (int i = 0; i < comando; i++)
@@ -1218,7 +1248,7 @@ A remoção é realizada através de:
 g.remove_vertice(vertice);
 ```
 
-Depois o contador usado pelo `main` é atualizado:
+Depois o contador usado pelo `Trabalho` é atualizado:
 
 ```cpp
 nos--;
@@ -1388,7 +1418,7 @@ O programa então:
 3. informa se o grafo é fortemente conexo;
 4. informa a quantidade de componentes quando houver mais de um.
 
-Para grafos não dirigidos, o `main` informa que a análise atual de SFCMs é destinada a grafos dirigidos e não chama o método.
+Para grafos não dirigidos, o `Trabalho` informa que a análise atual de SFCMs é destinada a grafos dirigidos e não chama o método.
 
 ---
 
@@ -1402,9 +1432,9 @@ Encerra o laço principal e finaliza o programa.
 
 ---
 
-# 18. Validações realizadas pelo `main`
+# 18. Validações realizadas pelo `Trabalho.cpp`
 
-O `main.cpp` realiza diversas verificações antes de chamar os métodos do grafo.
+O `Trabalho.cpp` realiza diversas verificações antes de chamar os métodos do grafo.
 
 Entre elas:
 
@@ -1450,11 +1480,11 @@ Em várias opções o valor:
 
 ---
 
-# 19. Fluxo entre `main.cpp` e a classe `grafo`
+# 19. Fluxo entre `Trabalho.cpp` e a classe `grafo`
 
 A interface não acessa diretamente a matriz de adjacência.
 
-O `main.cpp` recebe a solicitação do usuário e chama um método da classe.
+O `Trabalho.cpp` recebe a solicitação do usuário e chama um método da classe.
 
 Exemplo de criação de conexão:
 
@@ -1462,10 +1492,10 @@ Exemplo de criação de conexão:
 Usuário escolhe opção 4
         |
         v
-main lê os vértices A e B
+Trabalho.cpp lê os vértices A e B
         |
         v
-main valida os vértices
+Trabalho.cpp valida os vértices
         |
         v
 g.cria_conexao(A, B)
@@ -1480,7 +1510,7 @@ Outro exemplo, para BFS:
 Usuário escolhe opção 7
         |
         v
-main lê o vértice inicial
+Trabalho.cpp lê o vértice inicial
         |
         v
 g.bfs(vertice)
@@ -1572,13 +1602,13 @@ O projeto utiliza apenas recursos da linguagem C++ e da biblioteca padrão.
 Com `g++`:
 
 ```bash
-g++ -std=c++17 main.cpp -o Grafo
+g++ -std=c++17 Trabalho.cpp -o Criador_grafos
 ```
 
 Executar:
 
 ```bash
-./Grafo
+./Criador_grafos
 ```
 
 ---
@@ -1588,13 +1618,13 @@ Executar:
 Com MinGW-w64:
 
 ```bash
-g++ -std=c++17 main.cpp -o Grafo.exe
+g++ -std=c++17 Trabalho.cpp -o Criador_grafos.exe
 ```
 
 Executar no PowerShell:
 
 ```powershell
-.\Grafo.exe
+.\Criador_grafos.exe
 ```
 
 ---
@@ -1604,7 +1634,7 @@ Executar no PowerShell:
 Com o compilador cruzado MinGW-w64:
 
 ```bash
-x86_64-w64-mingw32-g++ -std=c++17 main.cpp -o Grafo.exe -static -static-libgcc -static-libstdc++
+x86_64-w64-mingw32-g++ -std=c++17 Trabalho.cpp -o Criador_grafos.exe -static -static-libgcc -static-libstdc++
 ```
 
 ---
@@ -1669,6 +1699,6 @@ Entretanto, a opção `11` não executa uma verificação específica de conecti
 
 O projeto utiliza uma matriz de adjacência dinâmica para permitir que a estrutura do grafo seja modificada durante a execução.
 
-A classe `grafo` concentra as operações sobre a estrutura e os algoritmos, enquanto o `main.cpp` controla a interação com o usuário e direciona cada comando para o método correspondente.
+A classe `grafo` concentra as operações sobre a estrutura e os algoritmos, enquanto o `Trabalho.cpp` controla a interação com o usuário e direciona cada comando para o método correspondente.
 
 Essa organização permite realizar tanto operações básicas de edição do grafo quanto algoritmos de análise, incluindo BFS, DFS, fechos transitivos e identificação de Componentes Fortemente Conexos Máximos.
