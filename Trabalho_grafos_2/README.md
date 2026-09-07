@@ -1572,7 +1572,7 @@ O projeto utiliza apenas recursos da linguagem C++ e da biblioteca padrão.
 Com `g++`:
 
 ```bash
-g++ -std=c++17 main.cpp -o Grafo
+g++ -std=c++17 Trabalho.cpp -o Grafo
 ```
 
 Executar:
@@ -1588,7 +1588,7 @@ Executar:
 Com MinGW-w64:
 
 ```bash
-g++ -std=c++17 main.cpp -o Grafo.exe
+g++ -std=c++17 Trabalho.cpp -o Grafo.exe
 ```
 
 Executar no PowerShell:
@@ -1604,7 +1604,7 @@ Executar no PowerShell:
 Com o compilador cruzado MinGW-w64:
 
 ```bash
-x86_64-w64-mingw32-g++ -std=c++17 main.cpp -o Grafo.exe -static -static-libgcc -static-libstdc++
+x86_64-w64-mingw32-g++ -std=c++17 Trabalho.cpp -o Grafo.exe -static -static-libgcc -static-libstdc++
 ```
 
 ---
