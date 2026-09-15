@@ -136,6 +136,7 @@ class grafo
 {
 private:
     int nos;
+    int arestas;
     bool conexo;
     bool dirigido;
     int **matriz_adjacencia;
@@ -261,9 +262,11 @@ void cria_conexao(int a, int b){
     if(vertice_valido(a) && vertice_valido(b)){
         if(this->dirigido){
             this->matriz_adjacencia[a - 1][b - 1] = 1;
+            this->arestas++;
         }else{
             this->matriz_adjacencia[a - 1][b - 1] = 1;
             this->matriz_adjacencia[b - 1][a - 1] = 1;
+            this->arestas++;
         };
     }
 }
@@ -272,9 +275,11 @@ void remove_conexao(int a, int b){
     if(vertice_valido(a) && vertice_valido(b)){
         if(this->dirigido){
             this->matriz_adjacencia[a - 1][b - 1] = 0;
+            this->arestas--;
         }else{
             this->matriz_adjacencia[a - 1][b - 1] = 0;
             this->matriz_adjacencia[b - 1][a - 1] = 0;
+            this->arestas--;
         };
     }
 }
@@ -309,6 +314,7 @@ void bfs(int vertice_inicial)
 
     cout << "Percurso BFS: ";
 
+    //verifica a parte conexa com o vertice inicial
     while (!fila.empty())
     {
         int atual = fila.get_inicio();
@@ -326,6 +332,25 @@ void bfs(int vertice_inicial)
                 fila.queue(i);
             }
         }
+        
+    }
+    //verifica a parte desconexa com o vertice inicial
+    for(int i =0; i < this->nos; i++){
+        if(!visitados[i]){
+            fila.queue(i);
+            visitados[i] = true;
+            while(!fila.empty()){
+                int atual = fila.get_inicio();
+                fila.unqueue();
+                cout << atual + 1 << " ";
+                for(int j = 0; j<this->nos; j++){
+                    if(this->matriz_adjacencia[atual][j] == 1 && !visitados[j]){
+                        visitados[j] = true;
+                        fila.queue(j);
+                    }
+                }
+            }
+        };
     }
 
     cout << endl;
@@ -382,6 +407,27 @@ void dfs(int vertice_inicial)
                     p.push(i);
                 }
             }
+        }
+    }
+    for(int i = 0; i<this->nos; i++){
+        if(!visitados[i]){
+            p.push(i);
+            while(!p.empty()){
+                int atual = p.top();
+                p.pop();
+                if(!visitados[atual]){
+                    visitados[atual] = true;
+                    cout << atual + 1 << " ";
+                    for(int j = 0; j<this->nos;j++){
+                        if(this->matriz_adjacencia[atual][j] == 1 && !visitados[j]){
+                            visitados[j] = true;
+                            p.push(j);
+                        }
+                    }
+                }
+
+            }
+
         }
     }
 
