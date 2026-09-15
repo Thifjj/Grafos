@@ -701,6 +701,50 @@ void componentes_conexos()
     delete[] componente;
 }
 
+//verificar ciclo 3 existente grafo
+bool is_ciclo_3(){
+if(!this->dirigido){
+    for(int v = 0; v < this->nos;v++){
+        for(int i = 0; i<this->nos;i++){
+            if(this->matriz_adjacencia[v][i] == 1){
+                for(int j = 0; j<this->nos;j++){
+                    if(this->matriz_adjacencia[i][j] == 1 && this->matriz_adjacencia[j][v] == 1){
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}else{
+    return false;
+}
+}
+
+//verificacao se e planar com euler
+bool planar_euler(){
+    if(is_ciclo_3()){
+        if(this->arestas <= (3*this->nos) - 6){
+            return true;
+        }else{
+            return false;
+        }
+    }else{
+        if(this->arestas <= (2*this->nos) - 4){
+            return true;
+        }else{
+            return false;
+        }
+    }
+}
+//calcula areas do grafo
+void areas_grafo(){
+    int areas = 0;
+    if(planar_euler()){
+        areas = (this->arestas+2-this->vertices)
+    }
+}
+
 void mostrar_grafo()
 {
     cout << "\nMatriz de adjacencia:\n\n";
