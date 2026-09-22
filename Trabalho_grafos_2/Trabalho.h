@@ -140,634 +140,818 @@ private:
     bool conexo;
     bool dirigido;
     int **matriz_adjacencia;
+
 public:
-//inicializa o grafo
-void inicializa_grafo(int nos = 0 ,bool dirigido = false){
-    //inicializando matriz
-    this->matriz_adjacencia = new int*[nos];
-    for (int i = 0; i < nos; i++) {
-        this->matriz_adjacencia[i] = new int[nos];
-    }
-    //zerando matriz
-    for (int i = 0; i < nos; i++)
+    // inicializa o grafo
+    void inicializa_grafo(int nos = 0, bool dirigido = false)
     {
-        for (int j = 0; j < nos; j++)
+        // inicializando matriz
+        this->matriz_adjacencia = new int *[nos];
+        for (int i = 0; i < nos; i++)
         {
-            this->matriz_adjacencia[i][j] = 0; // Zera a matriz
+            this->matriz_adjacencia[i] = new int[nos];
         }
-    };
-    //setando quantidade de nos e se dirigido
-    this->nos = nos;
-    this->dirigido = dirigido;
-}
-bool vertice_valido(int v)
-{
-    return v >= 1 && v <= this->nos;
-}
-void cria_vertice() {
-    int novo_tamanho = this->nos + 1;
-
-    // Cria nova matriz maior
-    int **nova_matriz = new int*[novo_tamanho];
-
-    for (int i = 0; i < novo_tamanho; i++) {
-        nova_matriz[i] = new int[novo_tamanho];
-    }
-
-    // Zera a nova matriz
-    for (int i = 0; i < novo_tamanho; i++) {
-        for (int j = 0; j < novo_tamanho; j++) {
-            nova_matriz[i][j] = 0;
-        }
-    }
-
-    // Copia a matriz antiga
-    for (int i = 0; i < this->nos; i++) {
-        for (int j = 0; j < this->nos; j++) {
-            nova_matriz[i][j] = this->matriz_adjacencia[i][j];
-        }
-    }
-
-    // Apaga matriz antiga
-    for (int i = 0; i < this->nos; i++) {
-        delete[] this->matriz_adjacencia[i];
-    }
-
-    delete[] this->matriz_adjacencia;
-
-    // Atualiza o ponteiro
-    this->matriz_adjacencia = nova_matriz;
-
-    // Atualiza quantidade de nós
-    this->nos = novo_tamanho;
-}
-void remove_vertice(int vertice) {
-    if (!vertice_valido(vertice))
-    {
-        cout << "Vertice invalido!" << endl;
-        return;
-    }
-    int indice_remocao = vertice - 1; // Ajusta para índice baseado em 0
-    int novo_tamanho = this->nos - 1;
-
-    // Cria nova matriz menor
-    int **nova_matriz = new int*[novo_tamanho];
-
-    for (int i = 0; i < novo_tamanho; i++) {
-        nova_matriz[i] = new int[novo_tamanho];
-    }
-
-    // Zera a nova matriz
-    for (int i = 0; i < novo_tamanho; i++) {
-        for (int j = 0; j < novo_tamanho; j++) {
-            nova_matriz[i][j] = 0;
-        }
-    }
-
-    int nova_linha = 0;
-
-    for (int i = 0; i < this->nos; i++)
-    {
-        if (i == indice_remocao)
-            continue;
-
-        int nova_coluna = 0;
-
-        for (int j = 0; j < this->nos; j++)
+        // zerando matriz
+        for (int i = 0; i < nos; i++)
         {
-            if (j == indice_remocao)
-                continue;
+            for (int j = 0; j < nos; j++)
+            {
+                this->matriz_adjacencia[i][j] = 0; // Zera a matriz
+            }
+        };
+        // setando quantidade de nos e se dirigido
+        this->nos = nos;
+        this->dirigido = dirigido;
+    }
+    bool vertice_valido(int v)
+    {
+        return v >= 1 && v <= this->nos;
+    }
+    void cria_vertice()
+    {
+        int novo_tamanho = this->nos + 1;
 
-            nova_matriz[nova_linha][nova_coluna] =
-                this->matriz_adjacencia[i][j];
+        // Cria nova matriz maior
+        int **nova_matriz = new int *[novo_tamanho];
 
-            nova_coluna++;
+        for (int i = 0; i < novo_tamanho; i++)
+        {
+            nova_matriz[i] = new int[novo_tamanho];
         }
 
-        nova_linha++;
-    }
+        // Zera a nova matriz
+        for (int i = 0; i < novo_tamanho; i++)
+        {
+            for (int j = 0; j < novo_tamanho; j++)
+            {
+                nova_matriz[i][j] = 0;
+            }
+        }
 
-    for (int i = 0; i < this->nos; i++)
-    {
-        delete[] this->matriz_adjacencia[i];
-    }
-
-    delete[] this->matriz_adjacencia;
-
-    this->matriz_adjacencia = nova_matriz;
-    this->nos = novo_tamanho;
-}
-//cria conexao (aresta/arco)
-void cria_conexao(int a, int b){
-    if(vertice_valido(a) && vertice_valido(b)){
-        if(this->dirigido){
-            this->matriz_adjacencia[a - 1][b - 1] = 1;
-            this->arestas++;
-        }else{
-            this->matriz_adjacencia[a - 1][b - 1] = 1;
-            this->matriz_adjacencia[b - 1][a - 1] = 1;
-            this->arestas++;
-        };
-    }
-}
-//remove conexao (aresta/arco)
-void remove_conexao(int a, int b){
-    if(vertice_valido(a) && vertice_valido(b)){
-        if(this->dirigido){
-            this->matriz_adjacencia[a - 1][b - 1] = 0;
-            this->arestas--;
-        }else{
-            this->matriz_adjacencia[a - 1][b - 1] = 0;
-            this->matriz_adjacencia[b - 1][a - 1] = 0;
-            this->arestas--;
-        };
-    }
-}
-// ==========================================
-// BUSCA EM LARGURA (BFS)
-// ==========================================
-void bfs(int vertice_inicial)
-{
-    if (!vertice_valido(vertice_inicial))
-    {
-        cout << "Vertice inicial invalido para BFS!" << endl;
-        return;
-    }
-
-    bool *visitados = new bool[this->nos];
-    fifo fila;
-
-    fila.inicializar_fifo(this->nos);
-
-    // Inicializa todos como não visitados
-    for (int i = 0; i < this->nos; i++)
-    {
-        visitados[i] = false;
-    }
-
-    // Como o usuario usa vertices 1, 2, 3...
-    // convertemos para indices 0, 1, 2...
-    int origem = vertice_inicial - 1;
-
-    fila.queue(origem);
-    visitados[origem] = true;
-
-    cout << "Percurso BFS: ";
-
-    //verifica a parte conexa com o vertice inicial
-    while (!fila.empty())
-    {
-        int atual = fila.get_inicio();
-        fila.unqueue();
-
-        cout << atual + 1 << " ";
-
-        // Procura vizinhos do vertice atual
+        // Copia a matriz antiga
         for (int i = 0; i < this->nos; i++)
         {
-            if (this->matriz_adjacencia[atual][i] == 1 &&
-                !visitados[i])
+            for (int j = 0; j < this->nos; j++)
             {
-                visitados[i] = true;
-                fila.queue(i);
+                nova_matriz[i][j] = this->matriz_adjacencia[i][j];
             }
         }
-        
-    }
-    //verifica a parte desconexa com o vertice inicial
-    for(int i =0; i < this->nos; i++){
-        if(!visitados[i]){
-            fila.queue(i);
-            visitados[i] = true;
-            while(!fila.empty()){
-                int atual = fila.get_inicio();
-                fila.unqueue();
-                cout << atual + 1 << " ";
-                for(int j = 0; j<this->nos; j++){
-                    if(this->matriz_adjacencia[atual][j] == 1 && !visitados[j]){
-                        visitados[j] = true;
-                        fila.queue(j);
-                    }
-                }
-            }
-        };
-    }
 
-    cout << endl;
-
-    delete[] visitados;
-    fila.deletarfila();
-}
-// ==========================================
-// BUSCA EM PROFUNDIDADE (DFS)
-// ==========================================
-void dfs(int vertice_inicial)
-{
-    if (!vertice_valido(vertice_inicial))
-    {
-        cout << "Vertice inicial invalido para DFS!" << endl;
-        return;
-    }
-
-    bool *visitados = new bool[this->nos];
-
-    for (int i = 0; i < this->nos; i++)
-    {
-        visitados[i] = false;
-    }
-
-    pilha p;
-
-    p.inicializar_pilha(this->nos * this->nos);
-
-    int origem = vertice_inicial - 1;
-
-    p.push(origem);
-
-    cout << "Percurso DFS: ";
-
-    while (!p.empty())
-    {
-        int atual = p.top();
-        p.pop();
-
-        if (!visitados[atual])
+        // Apaga matriz antiga
+        for (int i = 0; i < this->nos; i++)
         {
-            visitados[atual] = true;
+            delete[] this->matriz_adjacencia[i];
+        }
+
+        delete[] this->matriz_adjacencia;
+
+        // Atualiza o ponteiro
+        this->matriz_adjacencia = nova_matriz;
+
+        // Atualiza quantidade de nós
+        this->nos = novo_tamanho;
+    }
+    void remove_vertice(int vertice)
+    {
+        if (!vertice_valido(vertice))
+        {
+            cout << "Vertice invalido!" << endl;
+            return;
+        }
+        int indice_remocao = vertice - 1; // Ajusta para índice baseado em 0
+        int novo_tamanho = this->nos - 1;
+
+        // Cria nova matriz menor
+        int **nova_matriz = new int *[novo_tamanho];
+
+        for (int i = 0; i < novo_tamanho; i++)
+        {
+            nova_matriz[i] = new int[novo_tamanho];
+        }
+
+        // Zera a nova matriz
+        for (int i = 0; i < novo_tamanho; i++)
+        {
+            for (int j = 0; j < novo_tamanho; j++)
+            {
+                nova_matriz[i][j] = 0;
+            }
+        }
+
+        int nova_linha = 0;
+
+        for (int i = 0; i < this->nos; i++)
+        {
+            if (i == indice_remocao)
+                continue;
+
+            int nova_coluna = 0;
+
+            for (int j = 0; j < this->nos; j++)
+            {
+                if (j == indice_remocao)
+                    continue;
+
+                nova_matriz[nova_linha][nova_coluna] =
+                    this->matriz_adjacencia[i][j];
+
+                nova_coluna++;
+            }
+
+            nova_linha++;
+        }
+
+        for (int i = 0; i < this->nos; i++)
+        {
+            delete[] this->matriz_adjacencia[i];
+        }
+
+        delete[] this->matriz_adjacencia;
+
+        this->matriz_adjacencia = nova_matriz;
+        this->nos = novo_tamanho;
+    }
+    // cria conexao (aresta/arco)
+    void cria_conexao(int a, int b)
+    {
+        if (vertice_valido(a) && vertice_valido(b))
+        {
+            if (this->dirigido)
+            {
+                this->matriz_adjacencia[a - 1][b - 1] = 1;
+                this->arestas++;
+            }
+            else
+            {
+                this->matriz_adjacencia[a - 1][b - 1] = 1;
+                this->matriz_adjacencia[b - 1][a - 1] = 1;
+                this->arestas++;
+            };
+        }
+    }
+    // remove conexao (aresta/arco)
+    void remove_conexao(int a, int b)
+    {
+        if (vertice_valido(a) && vertice_valido(b))
+        {
+            if (this->dirigido)
+            {
+                this->matriz_adjacencia[a - 1][b - 1] = 0;
+                this->arestas--;
+            }
+            else
+            {
+                this->matriz_adjacencia[a - 1][b - 1] = 0;
+                this->matriz_adjacencia[b - 1][a - 1] = 0;
+                this->arestas--;
+            };
+        }
+    }
+    // ==========================================
+    // BUSCA EM LARGURA (BFS)
+    // ==========================================
+    void bfs(int vertice_inicial)
+    {
+        if (!vertice_valido(vertice_inicial))
+        {
+            cout << "Vertice inicial invalido para BFS!" << endl;
+            return;
+        }
+
+        bool *visitados = new bool[this->nos];
+        fifo fila;
+
+        fila.inicializar_fifo(this->nos);
+
+        // Inicializa todos como não visitados
+        for (int i = 0; i < this->nos; i++)
+        {
+            visitados[i] = false;
+        }
+
+        // Como o usuario usa vertices 1, 2, 3...
+        // convertemos para indices 0, 1, 2...
+        int origem = vertice_inicial - 1;
+
+        fila.queue(origem);
+        visitados[origem] = true;
+
+        cout << "Percurso BFS: ";
+
+        // verifica a parte conexa com o vertice inicial
+        while (!fila.empty())
+        {
+            int atual = fila.get_inicio();
+            fila.unqueue();
 
             cout << atual + 1 << " ";
 
-            // Vai de tras para frente porque a pilha é LIFO.
-            // Assim os vertices menores tendem a sair primeiro.
-            for (int i = this->nos - 1; i >= 0; i--)
+            // Procura vizinhos do vertice atual
+            for (int i = 0; i < this->nos; i++)
             {
                 if (this->matriz_adjacencia[atual][i] == 1 &&
                     !visitados[i])
                 {
-                    p.push(i);
+                    visitados[i] = true;
+                    fila.queue(i);
                 }
             }
         }
-    }
-    for(int i = 0; i<this->nos; i++){
-        if(!visitados[i]){
-            p.push(i);
-            while(!p.empty()){
-                int atual = p.top();
-                p.pop();
-                if(!visitados[atual]){
-                    visitados[atual] = true;
+        // verifica a parte desconexa com o vertice inicial
+        for (int i = 0; i < this->nos; i++)
+        {
+            if (!visitados[i])
+            {
+                fila.queue(i);
+                visitados[i] = true;
+                while (!fila.empty())
+                {
+                    int atual = fila.get_inicio();
+                    fila.unqueue();
                     cout << atual + 1 << " ";
-                    for(int j = 0; j<this->nos;j++){
-                        if(this->matriz_adjacencia[atual][j] == 1 && !visitados[j]){
+                    for (int j = 0; j < this->nos; j++)
+                    {
+                        if (this->matriz_adjacencia[atual][j] == 1 && !visitados[j])
+                        {
                             visitados[j] = true;
-                            p.push(j);
+                            fila.queue(j);
                         }
                     }
                 }
-
-            }
-
+            };
         }
-    }
-
-    cout << endl;
-
-    delete[] visitados;
-    p.deletarpilha();
-}
-
-void calcula_fecho(int origem, bool inverso, int *nivel)
-{
-    for (int i = 0; i < this->nos; i++)
-    {
-        nivel[i] = -1;
-    }
-
-    fifo fila;
-    fila.inicializar_fifo(this->nos);
-
-    nivel[origem] = 0;
-    fila.queue(origem);
-
-    while (!fila.empty())
-    {
-        int atual = fila.get_inicio();
-        fila.unqueue();
-
-        for (int i = 0; i < this->nos; i++)
-        {
-            bool possui_conexao;
-
-            if (!inverso)
-            {
-                // Fecho direto
-                // atual -> i
-                possui_conexao = this->matriz_adjacencia[atual][i] == 1;
-            }
-            else
-            {
-                // Fecho inverso
-                // i -> atual
-                possui_conexao = this->matriz_adjacencia[i][atual] == 1;
-            }
-
-            if (possui_conexao && nivel[i] == -1)
-            {
-                nivel[i] = nivel[atual] + 1;
-
-                fila.queue(i);
-            }
-        }
-    }
-
-    fila.deletarfila();
-}
-
-void fecho_transitivo_direto(int vertice_inicial)
-{
-    if (vertice_inicial < 1 || vertice_inicial > this->nos)
-    {
-        cout << "Vertice invalido!" << endl;
-        return;
-    }
-
-    int *nivel = new int[this->nos];
-
-    calcula_fecho(vertice_inicial - 1, false, nivel);
-
-    cout << "\nFecho Transitivo Direto de " << vertice_inicial << endl;
-
-    cout << "Vertice\tNivel" << endl;
-
-    for (int i = 0; i < this->nos; i++)
-    {
-        cout << i + 1 << "\t";
-
-        if (nivel[i] == -1)
-            cout << "-";
-        else
-            cout << nivel[i];
 
         cout << endl;
+
+        delete[] visitados;
+        fila.deletarfila();
     }
-
-    delete[] nivel;
-}
-
-void fecho_transitivo_inverso(int vertice_inicial)
-{
-    if (vertice_inicial < 1 || vertice_inicial > this->nos)
+    // ==========================================
+    // BUSCA EM PROFUNDIDADE (DFS)
+    // ==========================================
+    void dfs(int vertice_inicial)
     {
-        cout << "Vertice invalido!" << endl;
-        return;
-    }
+        if (!vertice_valido(vertice_inicial))
+        {
+            cout << "Vertice inicial invalido para DFS!" << endl;
+            return;
+        }
 
-    int *nivel = new int[this->nos];
-
-    calcula_fecho(vertice_inicial - 1, true, nivel);
-
-    cout << "\nFecho Transitivo Inverso de " << vertice_inicial << endl;
-
-    cout << "Vertice\tNivel" << endl;
-
-    for (int i = 0; i < this->nos; i++)
-    {
-        cout << i + 1 << "\t";
-
-        if (nivel[i] == -1)
-            cout << "-";
-        else
-            cout << nivel[i];
-
-        cout << endl;
-    }
-
-    delete[] nivel;
-}
-
-void componentes_fortemente_conexos()
-{
-    if (!this->dirigido)
-    {
-        cout << "O grafo nao e dirigido." << endl;
-        return;
-    }
-
-    int *componente = new int[this->nos];
-
-    for (int i = 0; i < this->nos; i++)
-    {
-        componente[i] = -1;
-    }
-
-    int quantidade_componentes = 0;
-
-    for (int v = 0; v < this->nos; v++)
-    {
-        // Vertice ja pertence a algum componente
-        if (componente[v] != -1)
-            continue;
-
-        int *direto = new int[this->nos];
-        int *inverso = new int[this->nos];
-
-        calcula_fecho(v, false, direto);
-        calcula_fecho(v, true, inverso);
+        bool *visitados = new bool[this->nos];
 
         for (int i = 0; i < this->nos; i++)
         {
-            if (direto[i] != -1 &&
-                inverso[i] != -1)
-            {
-                componente[i] = quantidade_componentes;
-            }
+            visitados[i] = false;
         }
 
-        quantidade_componentes++;
+        pilha p;
 
-        delete[] direto;
-        delete[] inverso;
-    }
+        p.inicializar_pilha(this->nos * this->nos);
 
-    cout << "COMPONENTES FORTEMENTE CONEXOS" << endl;
+        int origem = vertice_inicial - 1;
 
-    for (int c = 0; c < quantidade_componentes; c++)
-    {
-        cout << "SFCM " << c + 1 << ": { ";
+        p.push(origem);
 
-        for (int i = 0; i < this->nos; i++)
+        cout << "Percurso DFS: ";
+
+        while (!p.empty())
         {
-            if (componente[i] == c)
+            int atual = p.top();
+            p.pop();
+
+            if (!visitados[atual])
             {
-                cout << i + 1 << " ";
-            }
-        }
+                visitados[atual] = true;
 
-        cout << "}" << endl;
-    }
+                cout << atual + 1 << " ";
 
-    cout << endl;
-
-    if (quantidade_componentes == 1)
-    {
-        cout << "O grafo e FORTEMENTE CONEXO." << endl;
-        this->conexo = true;
-    }
-    else
-    {
-        cout << "O grafo NAO e fortemente conexo." << endl;
-        cout << "Quantidade de SFCM: "
-             << quantidade_componentes << endl;
-
-        this->conexo = false;
-    }
-
-    delete[] componente;
-}
-
-void componentes_conexos()
-{
-    if (this->dirigido)
-    {
-        cout << "O grafo e dirigido." << endl;
-        cout << "Utilize componentes fortemente conexos." << endl;
-        return;
-    }
-
-    int *componente = new int[this->nos];
-
-    for (int i = 0; i < this->nos; i++)
-    {
-        componente[i] = -1;
-    }
-
-    int quantidade_componentes = 0;
-
-    for (int v = 0; v < this->nos; v++)
-    {
-        if (componente[v] != -1)
-            continue;
-
-        int *direto = new int[this->nos];
-
-        calcula_fecho(v, false, direto);
-
-        for (int i = 0; i < this->nos; i++)
-        {
-            if (direto[i] != -1)
-            {
-                componente[i] = quantidade_componentes;
-            }
-        }
-
-        quantidade_componentes++;
-
-        delete[] direto;
-    }
-
-    cout << "COMPONENTES CONEXOS" << endl;
-
-    for (int c = 0; c < quantidade_componentes; c++)
-    {
-        cout << "Componente " << c + 1 << ": { ";
-
-        for (int i = 0; i < this->nos; i++)
-        {
-            if (componente[i] == c)
-            {
-                cout << i + 1 << " ";
-            }
-        }
-
-        cout << "}" << endl;
-    }
-
-    cout << endl;
-
-    if (quantidade_componentes == 1)
-    {
-        cout << "O grafo e CONEXO." << endl;
-        this->conexo = true;
-    }
-    else
-    {
-        cout << "O grafo NAO e conexo." << endl;
-        cout << "Quantidade de componentes conexos: " << quantidade_componentes << endl;
-
-        this->conexo = false;
-    }
-
-    delete[] componente;
-}
-
-//verificar ciclo 3 existente grafo
-bool is_ciclo_3(){
-if(!this->dirigido){
-    for(int v = 0; v < this->nos;v++){
-        for(int i = 0; i<this->nos;i++){
-            if(this->matriz_adjacencia[v][i] == 1){
-                for(int j = 0; j<this->nos;j++){
-                    if(this->matriz_adjacencia[i][j] == 1 && this->matriz_adjacencia[j][v] == 1){
-                        return true;
+                // Vai de tras para frente porque a pilha é LIFO.
+                // Assim os vertices menores tendem a sair primeiro.
+                for (int i = this->nos - 1; i >= 0; i--)
+                {
+                    if (this->matriz_adjacencia[atual][i] == 1 &&
+                        !visitados[i])
+                    {
+                        p.push(i);
                     }
                 }
             }
         }
-    }
-    return false;
-}else{
-    return false;
-}
-}
-
-//verificacao se e planar com euler
-bool planar_euler(){
-    if(is_ciclo_3()){
-        if(this->arestas <= (3*this->nos) - 6){
-            return true;
-        }else{
-            return false;
-        }
-    }else{
-        if(this->arestas <= (2*this->nos) - 4){
-            return true;
-        }else{
-            return false;
-        }
-    }
-}
-//calcula areas do grafo
-void areas_grafo(){
-    int areas = 0;
-    if(planar_euler()){
-        areas = (this->arestas+2-this->vertices)
-    }
-}
-
-void mostrar_grafo()
-{
-    cout << "\nMatriz de adjacencia:\n\n";
-
-    cout << "   ";
-    for (int i = 0; i < nos; i++)
-        cout << i + 1 << " ";
-
-    cout << endl;
-
-    for (int i = 0; i < nos; i++)
-    {
-        cout << i + 1 << "  ";
-
-        for (int j = 0; j < nos; j++)
+        for (int i = 0; i < this->nos; i++)
         {
-            cout << matriz_adjacencia[i][j] << " ";
+            if (!visitados[i])
+            {
+                p.push(i);
+                while (!p.empty())
+                {
+                    int atual = p.top();
+                    p.pop();
+                    if (!visitados[atual])
+                    {
+                        visitados[atual] = true;
+                        cout << atual + 1 << " ";
+                        for (int j = 0; j < this->nos; j++)
+                        {
+                            if (this->matriz_adjacencia[atual][j] == 1 && !visitados[j])
+                            {
+                                visitados[j] = true;
+                                p.push(j);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         cout << endl;
-    }
-}
 
+        delete[] visitados;
+        p.deletarpilha();
+    }
+
+    void calcula_fecho(int origem, bool inverso, int *nivel)
+    {
+        for (int i = 0; i < this->nos; i++)
+        {
+            nivel[i] = -1;
+        }
+
+        fifo fila;
+        fila.inicializar_fifo(this->nos);
+
+        nivel[origem] = 0;
+        fila.queue(origem);
+
+        while (!fila.empty())
+        {
+            int atual = fila.get_inicio();
+            fila.unqueue();
+
+            for (int i = 0; i < this->nos; i++)
+            {
+                bool possui_conexao;
+
+                if (!inverso)
+                {
+                    // Fecho direto
+                    // atual -> i
+                    possui_conexao = this->matriz_adjacencia[atual][i] == 1;
+                }
+                else
+                {
+                    // Fecho inverso
+                    // i -> atual
+                    possui_conexao = this->matriz_adjacencia[i][atual] == 1;
+                }
+
+                if (possui_conexao && nivel[i] == -1)
+                {
+                    nivel[i] = nivel[atual] + 1;
+
+                    fila.queue(i);
+                }
+            }
+        }
+
+        fila.deletarfila();
+    }
+
+    void fecho_transitivo_direto(int vertice_inicial)
+    {
+        if (vertice_inicial < 1 || vertice_inicial > this->nos)
+        {
+            cout << "Vertice invalido!" << endl;
+            return;
+        }
+
+        int *nivel = new int[this->nos];
+
+        calcula_fecho(vertice_inicial - 1, false, nivel);
+
+        cout << "\nFecho Transitivo Direto de " << vertice_inicial << endl;
+
+        cout << "Vertice\tNivel" << endl;
+
+        for (int i = 0; i < this->nos; i++)
+        {
+            cout << i + 1 << "\t";
+
+            if (nivel[i] == -1)
+                cout << "-";
+            else
+                cout << nivel[i];
+
+            cout << endl;
+        }
+
+        delete[] nivel;
+    }
+
+    void fecho_transitivo_inverso(int vertice_inicial)
+    {
+        if (vertice_inicial < 1 || vertice_inicial > this->nos)
+        {
+            cout << "Vertice invalido!" << endl;
+            return;
+        }
+
+        int *nivel = new int[this->nos];
+
+        calcula_fecho(vertice_inicial - 1, true, nivel);
+
+        cout << "\nFecho Transitivo Inverso de " << vertice_inicial << endl;
+
+        cout << "Vertice\tNivel" << endl;
+
+        for (int i = 0; i < this->nos; i++)
+        {
+            cout << i + 1 << "\t";
+
+            if (nivel[i] == -1)
+                cout << "-";
+            else
+                cout << nivel[i];
+
+            cout << endl;
+        }
+
+        delete[] nivel;
+    }
+
+    void componentes_fortemente_conexos()
+    {
+        if (!this->dirigido)
+        {
+            cout << "O grafo nao e dirigido." << endl;
+            return;
+        }
+
+        int *componente = new int[this->nos];
+
+        for (int i = 0; i < this->nos; i++)
+        {
+            componente[i] = -1;
+        }
+
+        int quantidade_componentes = 0;
+
+        for (int v = 0; v < this->nos; v++)
+        {
+            // Vertice ja pertence a algum componente
+            if (componente[v] != -1)
+                continue;
+
+            int *direto = new int[this->nos];
+            int *inverso = new int[this->nos];
+
+            calcula_fecho(v, false, direto);
+            calcula_fecho(v, true, inverso);
+
+            for (int i = 0; i < this->nos; i++)
+            {
+                if (direto[i] != -1 &&
+                    inverso[i] != -1)
+                {
+                    componente[i] = quantidade_componentes;
+                }
+            }
+
+            quantidade_componentes++;
+
+            delete[] direto;
+            delete[] inverso;
+        }
+
+        cout << "COMPONENTES FORTEMENTE CONEXOS" << endl;
+
+        for (int c = 0; c < quantidade_componentes; c++)
+        {
+            cout << "SFCM " << c + 1 << ": { ";
+
+            for (int i = 0; i < this->nos; i++)
+            {
+                if (componente[i] == c)
+                {
+                    cout << i + 1 << " ";
+                }
+            }
+
+            cout << "}" << endl;
+        }
+
+        cout << endl;
+
+        if (quantidade_componentes == 1)
+        {
+            cout << "O grafo e FORTEMENTE CONEXO." << endl;
+            this->conexo = true;
+        }
+        else
+        {
+            cout << "O grafo NAO e fortemente conexo." << endl;
+            cout << "Quantidade de SFCM: "
+                 << quantidade_componentes << endl;
+
+            this->conexo = false;
+        }
+
+        delete[] componente;
+    }
+
+    void componentes_conexos()
+    {
+        if (this->dirigido)
+        {
+            cout << "O grafo e dirigido." << endl;
+            cout << "Utilize componentes fortemente conexos." << endl;
+            return;
+        }
+
+        int *componente = new int[this->nos];
+
+        for (int i = 0; i < this->nos; i++)
+        {
+            componente[i] = -1;
+        }
+
+        int quantidade_componentes = 0;
+
+        for (int v = 0; v < this->nos; v++)
+        {
+            if (componente[v] != -1)
+                continue;
+
+            int *direto = new int[this->nos];
+
+            calcula_fecho(v, false, direto);
+
+            for (int i = 0; i < this->nos; i++)
+            {
+                if (direto[i] != -1)
+                {
+                    componente[i] = quantidade_componentes;
+                }
+            }
+
+            quantidade_componentes++;
+
+            delete[] direto;
+        }
+
+        cout << "COMPONENTES CONEXOS" << endl;
+
+        for (int c = 0; c < quantidade_componentes; c++)
+        {
+            cout << "Componente " << c + 1 << ": { ";
+
+            for (int i = 0; i < this->nos; i++)
+            {
+                if (componente[i] == c)
+                {
+                    cout << i + 1 << " ";
+                }
+            }
+
+            cout << "}" << endl;
+        }
+
+        cout << endl;
+
+        if (quantidade_componentes == 1)
+        {
+            cout << "O grafo e CONEXO." << endl;
+            this->conexo = true;
+        }
+        else
+        {
+            cout << "O grafo NAO e conexo." << endl;
+            cout << "Quantidade de componentes conexos: " << quantidade_componentes << endl;
+
+            this->conexo = false;
+        }
+
+        delete[] componente;
+    }
+
+    // verificar ciclo 3 existente grafo
+    bool is_ciclo_3()
+    {
+        if (!this->dirigido)
+        {
+            for (int v = 0; v < this->nos; v++)
+            {
+                for (int i = 0; i < this->nos; i++)
+                {
+                    if (this->matriz_adjacencia[v][i] == 1)
+                    {
+                        for (int j = 0; j < this->nos; j++)
+                        {
+                            if (this->matriz_adjacencia[i][j] == 1 && this->matriz_adjacencia[j][v] == 1)
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    // verificacao se e planar com euler
+    bool planar_euler()
+    {
+        if (is_ciclo_3())
+        {
+            if (this->arestas <= (3 * this->nos) - 6)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        else
+        {
+            if (this->arestas <= (2 * this->nos) - 4)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+    }
+    // calcula areas do grafo
+    void areas_grafo()
+    {
+        int areas = 0;
+        if (planar_euler())
+        {
+            areas = (this->arestas + 2 - this->nos);
+        }
+    }
+
+    void mostrar_grafo()
+    {
+        cout << "\nMatriz de adjacencia:\n\n";
+
+        cout << "   ";
+        for (int i = 0; i < nos; i++)
+            cout << i + 1 << " ";
+
+        cout << endl;
+
+        for (int i = 0; i < nos; i++)
+        {
+            cout << i + 1 << "  ";
+
+            for (int j = 0; j < nos; j++)
+            {
+                cout << matriz_adjacencia[i][j] << " ";
+            }
+
+            cout << endl;
+        }
+    }
+    //colorir grafo
+
+    void coloracao_grafo()
+    {
+        int grau[this->nos];
+        int saturacao[this->nos];
+        int cor[this->nos];
+        bool is_colorido[this->nos];
+        int indice_maior_grau = -1;
+        int maior_grau = -1;
+        int v_cor = 1;
+
+        for (int i = 0; i < this->nos; i++)
+        {
+            grau[i] = 0;
+            cor[i] = 0;
+            is_colorido[i] = false;
+            saturacao[i] = 0;
+        }
+
+        // pegar grau de cada vertice
+        for (int i = 0; i < this->nos; i++)
+        {
+            for (int j = 0; j < this->nos; j++)
+            {
+                if (this->matriz_adjacencia[i][j] == 1)
+                {
+                    grau[i]++;
+                }
+            }
+        }
+
+    // colorir todos os vertices
+        int quantidade_coloridos = 0;
+        // colorir primeiro vertice
+        for (int i = 0; i < this->nos; i++)
+        {
+            if (grau[i] > maior_grau)
+            {
+                indice_maior_grau = i;
+                maior_grau = grau[i];
+            }
+        }
+
+        cor[indice_maior_grau] = v_cor;
+        is_colorido[indice_maior_grau] = true;
+        quantidade_coloridos++;
+
+        // colorir resto dos vertices
+
+        while (quantidade_coloridos < this->nos)
+        {
+            // calcular saturacao
+            for (int i = 0; i < this->nos; i++)
+            {
+                if (!is_colorido[i])
+                {
+                    // vetor armazenar cores vizinhas
+                    bool cores_vizinhas[this->nos + 1];
+                    // zerar vetor cores_vizinhas com false
+                    for (int k = 0; k <= this->nos; k++)
+                    {
+                        cores_vizinhas[k] = false;
+                    }
+                    // zerando saturacao antes da verificacao
+                    saturacao[i] = 0;
+                    // verificando adjacentes de [i]
+                    for (int j = 0; j < this->nos; j++)
+                    {
+                        // verificacao de conexao e se tem cor
+                        if (this->matriz_adjacencia[i][j] == 1 && is_colorido[j])
+                        {
+
+                            if (!cores_vizinhas[cor[j]])
+                            {
+
+                                cores_vizinhas[cor[j]] = true;
+                                saturacao[i]++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // achar maior saturacao
+            int maior_saturacao = -1;
+            int indice_maior_saturacao = -1;
+            int maior_grau_atual = -1;
+            // verificar maior saturacao atual
+            for (int i = 0; i < this->nos; i++)
+            {
+                if (!is_colorido[i])
+                {
+                    if (saturacao[i] > maior_saturacao)
+                    {
+                        maior_saturacao = saturacao[i];
+                        indice_maior_saturacao = i;
+                        maior_grau_atual = grau[i];
+                    }
+                    else if (saturacao[i] == maior_saturacao && grau[i] > maior_grau_atual)
+                    {
+                        maior_grau_atual = grau[i];
+                        indice_maior_saturacao = i;
+                    };
+                }
+            }
+
+            // escolher cor para colorir
+            bool cores_usadas[this->nos + 1];
+            for (int i = 0; i < this->nos; i++)
+            {
+                cores_usadas[i] = false;
+            }
+
+            for (int j = 0; j < this->nos; j++)
+            {
+                if (this->matriz_adjacencia[indice_maior_saturacao][j] == 1 && is_colorido[j])
+                {
+                    cores_usadas[cor[j]] = true;
+                }
+            }
+            v_cor = 1;
+            while (cores_usadas[v_cor])
+            {
+                v_cor++;
+            }
+            cor[indice_maior_saturacao] = v_cor;
+            is_colorido[indice_maior_saturacao] = true;
+
+            quantidade_coloridos++;
+        }
+    }
 };
 
 void system_pause()
