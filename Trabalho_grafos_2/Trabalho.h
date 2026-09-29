@@ -272,19 +272,19 @@ public:
         this->nos = novo_tamanho;
     }
     // cria conexao (aresta/arco)
-    void cria_conexao(int a, int b)
+    void cria_conexao(int a, int b, u_int8_t custo = 1)
     {
         if (vertice_valido(a) && vertice_valido(b))
         {
             if (this->dirigido)
             {
-                this->matriz_adjacencia[a - 1][b - 1] = 1;
+                this->matriz_adjacencia[a - 1][b - 1] = custo;
                 this->arestas++;
             }
             else
             {
-                this->matriz_adjacencia[a - 1][b - 1] = 1;
-                this->matriz_adjacencia[b - 1][a - 1] = 1;
+                this->matriz_adjacencia[a - 1][b - 1] = custo;
+                this->matriz_adjacencia[b - 1][a - 1] = custo;
                 this->arestas++;
             };
         }
@@ -349,7 +349,7 @@ public:
             // Procura vizinhos do vertice atual
             for (int i = 0; i < this->nos; i++)
             {
-                if (this->matriz_adjacencia[atual][i] == 1 &&
+                if (this->matriz_adjacencia[atual][i] > 0 &&
                     !visitados[i])
                 {
                     visitados[i] = true;
@@ -371,7 +371,7 @@ public:
                     cout << atual + 1 << " ";
                     for (int j = 0; j < this->nos; j++)
                     {
-                        if (this->matriz_adjacencia[atual][j] == 1 && !visitados[j])
+                        if (this->matriz_adjacencia[atual][j] > 0 && !visitados[j])
                         {
                             visitados[j] = true;
                             fila.queue(j);
@@ -429,7 +429,7 @@ public:
                 // Assim os vertices menores tendem a sair primeiro.
                 for (int i = this->nos - 1; i >= 0; i--)
                 {
-                    if (this->matriz_adjacencia[atual][i] == 1 &&
+                    if (this->matriz_adjacencia[atual][i] > 0 &&
                         !visitados[i])
                     {
                         p.push(i);
@@ -452,7 +452,7 @@ public:
                         cout << atual + 1 << " ";
                         for (int j = 0; j < this->nos; j++)
                         {
-                            if (this->matriz_adjacencia[atual][j] == 1 && !visitados[j])
+                            if (this->matriz_adjacencia[atual][j] > 0 && !visitados[j])
                             {
                                 visitados[j] = true;
                                 p.push(j);
@@ -495,13 +495,13 @@ public:
                 {
                     // Fecho direto
                     // atual -> i
-                    possui_conexao = this->matriz_adjacencia[atual][i] == 1;
+                    possui_conexao = this->matriz_adjacencia[atual][i] > 0;
                 }
                 else
                 {
                     // Fecho inverso
                     // i -> atual
-                    possui_conexao = this->matriz_adjacencia[i][atual] == 1;
+                    possui_conexao = this->matriz_adjacencia[i][atual] > 0;
                 }
 
                 if (possui_conexao && nivel[i] == -1)
@@ -742,11 +742,11 @@ public:
             {
                 for (int i = 0; i < this->nos; i++)
                 {
-                    if (this->matriz_adjacencia[v][i] == 1)
+                    if (this->matriz_adjacencia[v][i] > 0)
                     {
                         for (int j = 0; j < this->nos; j++)
                         {
-                            if (this->matriz_adjacencia[i][j] == 1 && this->matriz_adjacencia[j][v] == 1)
+                            if (this->matriz_adjacencia[i][j] > 0 && this->matriz_adjacencia[j][v] > 0)
                             {
                                 return true;
                             }
@@ -820,7 +820,7 @@ public:
             cout << endl;
         }
     }
-    //colorir grafo
+    // colorir grafo
 
     void coloracao_grafo()
     {
@@ -845,14 +845,14 @@ public:
         {
             for (int j = 0; j < this->nos; j++)
             {
-                if (this->matriz_adjacencia[i][j] == 1)
+                if (this->matriz_adjacencia[i][j] > 0)
                 {
                     grau[i]++;
                 }
             }
         }
 
-    // colorir todos os vertices
+        // colorir todos os vertices
         int quantidade_coloridos = 0;
         // colorir primeiro vertice
         for (int i = 0; i < this->nos; i++)
@@ -890,7 +890,7 @@ public:
                     for (int j = 0; j < this->nos; j++)
                     {
                         // verificacao de conexao e se tem cor
-                        if (this->matriz_adjacencia[i][j] == 1 && is_colorido[j])
+                        if (this->matriz_adjacencia[i][j] > 0 && is_colorido[j])
                         {
 
                             if (!cores_vizinhas[cor[j]])
@@ -936,7 +936,7 @@ public:
 
             for (int j = 0; j < this->nos; j++)
             {
-                if (this->matriz_adjacencia[indice_maior_saturacao][j] == 1 && is_colorido[j])
+                if (this->matriz_adjacencia[indice_maior_saturacao][j] > 0 && is_colorido[j])
                 {
                     cores_usadas[cor[j]] = true;
                 }
@@ -952,6 +952,88 @@ public:
             quantidade_coloridos++;
         }
     }
+
+    void busca_djikstra(u_int8_t inicial)
+    {
+        if (inicial < 1 || inicial > (this->nos))
+        {
+            cout << "Valor inicial invalido" << endl;
+            return;
+        }
+
+        u_int8_t estimativa_custo_min[this->nos];
+        int8_t precedente[this->nos];
+        bool fechado[this->nos];
+        u_int8_t menor_custo;
+        u_int8_t indice_menor_custo;
+        u_int8_t origem = inicial - 1;
+
+        // inicializa valores necessarios
+        for (int i = 0; i < this->nos; i++)
+        {
+            estimativa_custo_min[i] = 255;
+            precedente[i] = -1;
+            fechado[i] = false;
+        }
+        // bota origem como 0
+        estimativa_custo_min[origem] = 0;
+        // comeca laco verificacao de todos nos
+        for (int i = 0; i < this->nos; i++)
+        {
+            menor_custo = 255;
+            indice_menor_custo = 255;
+            // fica rodando ate fechar a origem
+            while (!fechado[origem])
+            {
+                for (int j = 0; j < this->nos; j++)
+                {
+                    //existe conexao entre nos
+                    if (this->matriz_adjacencia[origem][j] > 0)
+                    {
+                        //calcula custo da conexao
+                        int novo_custo = estimativa_custo_min[origem] + this->matriz_adjacencia[origem][j];
+                        //verifica se conexao ja nao esta fechada e se o custo e menor do que o atual
+                        if (!fechado[j] && estimativa_custo_min[j] > novo_custo)
+                        {
+                            //seta os novos valores de custo e precedente novos
+                            estimativa_custo_min[j] = novo_custo;
+                            precedente[j] = origem;
+                        }
+                    }
+                }
+                fechado[origem] = true;
+            }
+            // calculo do proximo a ser passado
+            for (int j = 0; j < this->nos; j++)
+            {
+                if (estimativa_custo_min[j] < menor_custo && !fechado[j])
+                {
+                    indice_menor_custo = j;
+                    menor_custo = estimativa_custo_min[j];
+                }
+            }
+            // se nao houver proximo somente sai
+            if (indice_menor_custo == 255)
+            {
+                break;
+            }
+            // coloca na origem o valor do proximo
+            origem = indice_menor_custo;
+        }
+        //imprimir vetores
+        for(int j = 0; j < this->nos; j++){
+            cout<<"No: " << j+1 << " ";
+        }
+        cout<<endl;
+        for(int j = 0; j < this->nos; j++){
+            cout <<"Cost"<< static_cast<int>(estimativa_custo_min[j]) << " ";
+        }
+        cout<<endl;
+        for(int j = 0; j < this->nos; j++){
+            cout << "Pre" << static_cast<int>(precedente[j]) +1 << " ";
+        }
+        cout<<endl;
+    };
 };
 
 void system_pause()

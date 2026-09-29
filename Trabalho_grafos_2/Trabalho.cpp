@@ -10,6 +10,7 @@ int main()
     int opcao;
     int nos = 0;
     int a, b;
+    int custo;
     int vertice;
     int comando;
 
@@ -36,6 +37,7 @@ int main()
         cout << "9  - Fecho transitivo direto" << endl;
         cout << "10 - Fecho transitivo inverso" << endl;
         cout << "11 - Verificar conectividade / SFCMs" << endl;
+        cout << "12 - Busca de Dijkstra" << endl;
         cout << "0  - Sair" << endl;
 
         cout << "\nEscolha uma opcao: ";
@@ -254,7 +256,10 @@ int main()
                     continue;
                 }
 
-                g.cria_conexao(a, b);
+                cout << "Custo da conexao: ";
+                cin >> custo;
+
+                g.cria_conexao(a, b, custo);
 
                 if (eh_dirigido)
                 {
@@ -475,6 +480,35 @@ int main()
             else
             {
                 g.componentes_conexos();
+            }
+
+            system_pause();
+            limpar_tela();
+            break;
+        }
+
+        // ==========================================
+        // DIJKSTRA
+        // ==========================================
+        case 12:
+        {
+            if (!grafo_criado || nos == 0)
+            {
+                cout << "O grafo nao possui vertices!" << endl;
+                break;
+            }
+
+            cout << "===== BUSCA DE DIJKSTRA =====" << endl;
+            cout << "Vertice inicial: ";
+            cin >> vertice;
+
+            if (g.vertice_valido(vertice))
+            {
+                g.busca_djikstra(vertice);
+            }
+            else
+            {
+                cout << "Vertice invalido!" << endl;
             }
 
             system_pause();
