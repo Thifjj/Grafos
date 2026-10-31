@@ -1,11 +1,14 @@
 #include <iostream>
-#include "Trabalho.h"
+#include "bibliotecas/Trabalho.h"
+#include "bibliotecas/VisualizacaoHtml.h"
 
 using namespace std;
 
 int main()
 {
     grafo g;
+    // ADICIONADO: espelha a saida sem modificar o menu do terminal.
+    SaidaVisual captura(cout);
 
     int opcao;
     int nos = 0;
@@ -18,6 +21,13 @@ int main()
 
     bool grafo_criado = false;
     bool eh_dirigido = false;
+
+    // ADICIONADO: a pagina acompanha o mesmo grafo utilizado no terminal.
+    auto atualizarJanela = [&] {
+        salvarVisualizacao(g, grafo_criado ? nos : 0, eh_dirigido, captura.texto());
+    };
+    atualizarJanela();
+    abrirVisualizacao();
 
     do
     {
@@ -38,10 +48,18 @@ int main()
         cout << "10 - Fecho transitivo inverso" << endl;
         cout << "11 - Verificar conectividade / SFCMs" << endl;
         cout << "12 - Busca de Dijkstra" << endl;
+        // ADICIONADO: acesso pelo menu as demais operacoes do grafo.
+        cout << "13 - Busca A*" << endl;
+        cout << "14 - Coloracao (nao dirigido)" << endl;
+        cout << "15 - Verificar ciclo de tamanho 3" << endl;
+        cout << "16 - Verificar limites de Euler para planaridade" << endl;
+        cout << "17 - Calcular areas" << endl;
         cout << "0  - Sair" << endl;
 
         cout << "\nEscolha uma opcao: ";
-        cin >> opcao;
+        // ALTERADO: encerra ao receber EOF ou entrada invalida no menu.
+        if (!(cin >> opcao))
+            break;
 
         cout << endl;
 
@@ -56,7 +74,8 @@ int main()
             {
                 cout << "Ja existe um grafo criado!" << endl;
                 cout << "Adicione ou remova vertices/conexoes " << "utilizando o menu." << endl;
-                system_pause();
+                atualizarJanela();
+            system_pause();
                 break;
             }
 
@@ -90,6 +109,7 @@ int main()
                 cout << "Tipo: nao dirigido" << endl;
 
             cout << "Vertices: " << nos << endl;
+            atualizarJanela();
             system_pause();
             limpar_tela();
             break;
@@ -103,7 +123,8 @@ int main()
             if (!grafo_criado)
             {
                 cout << "Primeiro crie um grafo!" << endl;
-                system_pause();
+                atualizarJanela();
+            system_pause();
                 break;
             }
 
@@ -140,6 +161,7 @@ int main()
                 cout << "Total de vertices: "
                      << nos << endl;
             }
+            atualizarJanela();
             system_pause();
             limpar_tela();
             break;
@@ -153,7 +175,8 @@ int main()
             if (!grafo_criado)
             {
                 cout << "Primeiro crie um grafo!" << endl;
-                system_pause();
+                atualizarJanela();
+            system_pause();
                 break;
             }
 
@@ -191,6 +214,7 @@ int main()
                     break;
                 }
             }
+            atualizarJanela();
             system_pause();
             limpar_tela();
             break;
@@ -274,6 +298,7 @@ int main()
                          << " criada!" << endl;
                 }
             }
+            atualizarJanela();
             system_pause();
             limpar_tela();
             break;
@@ -339,6 +364,7 @@ int main()
 
                 cout << "Conexao removida!" << endl;
             }
+            atualizarJanela();
             system_pause();
             limpar_tela();
             break;
@@ -356,6 +382,7 @@ int main()
             }
 
             g.mostrar_grafo();
+            atualizarJanela();
             system_pause();
             limpar_tela();
             break;
@@ -379,6 +406,7 @@ int main()
                 g.bfs(vertice);
             }
 
+            atualizarJanela();
             system_pause();
             limpar_tela();
             break;
@@ -403,6 +431,7 @@ int main()
                 g.dfs(vertice);
             }
 
+            atualizarJanela();
             system_pause();
             limpar_tela();
             break;
@@ -428,6 +457,7 @@ int main()
                 g.fecho_transitivo_direto(vertice);
             }
 
+            atualizarJanela();
             system_pause();
             limpar_tela();
             break;
@@ -453,6 +483,7 @@ int main()
                 g.fecho_transitivo_inverso(vertice);
             }
 
+            atualizarJanela();
             system_pause();
             limpar_tela();
             break;
@@ -466,7 +497,8 @@ int main()
             if (!grafo_criado || nos == 0)
             {
                 cout << "O grafo nao possui vertices!" << endl;
-                system_pause();
+                atualizarJanela();
+            system_pause();
                 limpar_tela();
                 break;
             }
@@ -482,6 +514,7 @@ int main()
                 g.componentes_conexos();
             }
 
+            atualizarJanela();
             system_pause();
             limpar_tela();
             break;
@@ -511,6 +544,62 @@ int main()
                 cout << "Vertice invalido!" << endl;
             }
 
+            atualizarJanela();
+            system_pause();
+            limpar_tela();
+            break;
+        }
+
+        // ADICIONADO: A* recebe origem e destino; a funcao le as heuristicas.
+        case 13:
+        {
+            if (!grafo_criado || nos == 0)
+            {
+                cout << "O grafo nao possui vertices!" << endl;
+                break;
+            }
+            cout << "Vertice inicial (-1 para voltar): ";
+            cin >> a;
+            if (a == -1) break;
+            cout << "Destino (-1 para voltar): ";
+            cin >> b;
+            if (b == -1) break;
+            g.a_estrela(a, b);
+            atualizarJanela();
+            system_pause();
+            limpar_tela();
+            break;
+        }
+
+        // ADICIONADO: operacoes exclusivas de grafos nao dirigidos.
+        case 14:
+        case 15:
+        case 16:
+        case 17:
+        {
+            if (!grafo_criado || nos == 0)
+            {
+                cout << "O grafo nao possui vertices!" << endl;
+                break;
+            }
+            if (eh_dirigido)
+            {
+                cout << "Esta operacao requer um grafo nao dirigido." << endl;
+                break;
+            }
+            if (opcao == 14)
+                g.coloracao_grafo();
+            else if (opcao == 15)
+                cout << (g.is_ciclo_3() ? "Existe ciclo de tamanho 3." : "Nao existe ciclo de tamanho 3.") << endl;
+            else if (opcao == 16)
+                cout << (g.planar_euler()
+                    ? "Satisfaz os limites de Euler; isso nao garante planaridade."
+                    : "Nao satisfaz os limites de Euler implementados.") << endl;
+            else
+            {
+                g.areas_grafo();
+            }
+            atualizarJanela();
             system_pause();
             limpar_tela();
             break;
@@ -532,6 +621,7 @@ int main()
         }
         }
 
+        atualizarJanela();
     } while (opcao != 0);
 
     return 0;

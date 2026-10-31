@@ -1,2 +1,0 @@
-Windows: somente clicar 2x no executável
-Linux: ./Criador_grafos

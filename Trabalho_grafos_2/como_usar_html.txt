@@ -1,0 +1,12 @@
+TERMINAL COM VISUALIZACAO HTML
+Execute ./Trabalho_grafos_2/bin/grafos_html a partir da raiz do repositorio.
+O menu original aparece no terminal e o navegador abre automaticamente.
+Use as opcoes do terminal. A pagina mostra a matriz desenhada e a saida C++.
+Ela atualiza a cada 2 segundos e antes das pausas do menu.
+Se nao abrir automaticamente, abra grafos_visualizacao.html no diretorio
+em que iniciou o programa. Nao ha servidor e nao precisa de Qt.
+
+Compilar dentro de Trabalho_grafos_2 com GCC (Linux ou MinGW Windows):
+g++ -std=c++17 Trabalho.cpp -o grafos_html
+No Windows, use -o grafos_html.exe.
+A compilacao Windows ainda precisa ser testada nesse sistema.

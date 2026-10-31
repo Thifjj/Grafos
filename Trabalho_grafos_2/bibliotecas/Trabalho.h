@@ -135,13 +135,35 @@ public:
 class grafo
 {
 private:
-    int nos;
+    int nos = 0; // ALTERADO: permite sair sem inicializar o grafo.
     int arestas;
+    int areas;
     bool conexo;
     bool dirigido;
-    int **matriz_adjacencia;
+    int **matriz_adjacencia = nullptr; // ALTERADO: destrutor seguro antes da criacao.
 
 public:
+    // ADICIONADO: antes a matriz nao era liberada ao destruir o grafo.
+    // ADICIONADO: consulta somente leitura para desenhar o grafo na interface.
+    int custo_conexao(int a, int b) const
+    {
+        return matriz_adjacencia[a - 1][b - 1];
+    }
+
+    // Agora libera cada linha e depois o vetor de ponteiros.
+    ~grafo()
+    {
+        for (int i = 0; i < nos; i++)
+            delete[] matriz_adjacencia[i];
+        delete[] matriz_adjacencia;
+    }
+
+    // ADICIONADO: a copia superficial da matriz causaria liberacao duplicada
+    // com o destrutor. O grafo passa a nao permitir copia.
+    grafo() = default;
+    grafo(const grafo &) = delete;
+    grafo &operator=(const grafo &) = delete;
+
     // inicializa o grafo
     void inicializa_grafo(int nos = 0, bool dirigido = false)
     {
@@ -162,6 +184,8 @@ public:
         // setando quantidade de nos e se dirigido
         this->nos = nos;
         this->dirigido = dirigido;
+        this->arestas = 0;
+        this->areas = 0;
     }
     bool vertice_valido(int v)
     {
@@ -220,6 +244,18 @@ public:
         }
         int indice_remocao = vertice - 1; // Ajusta para índice baseado em 0
         int novo_tamanho = this->nos - 1;
+
+        // ALTERADO: antes removia o vertice sem descontar suas conexoes.
+        // Agora desconta cada aresta incidente; em grafos dirigidos,
+        // desconta tambem os arcos de entrada, sem contar lacos duas vezes.
+        for (int i = 0; i < this->nos; i++)
+        {
+            if (this->matriz_adjacencia[indice_remocao][i] > 0)
+                this->arestas--;
+            if (this->dirigido && i != indice_remocao &&
+                this->matriz_adjacencia[i][indice_remocao] > 0)
+                this->arestas--;
+        }
 
         // Cria nova matriz menor
         int **nova_matriz = new int *[novo_tamanho];
@@ -454,7 +490,9 @@ public:
                         {
                             if (this->matriz_adjacencia[atual][j] > 0 && !visitados[j])
                             {
-                                visitados[j] = true;
+                                // ALTERADO: antes marcava visitados[j] aqui e o
+                                // vertice era ignorado ao sair da pilha. Agora
+                                // a marcacao ocorre ao processar o vertice.
                                 p.push(j);
                             }
                         }
@@ -791,11 +829,15 @@ public:
     // calcula areas do grafo
     void areas_grafo()
     {
-        int areas = 0;
         if (planar_euler())
         {
-            areas = (this->arestas + 2 - this->nos);
+            this->areas = (this->arestas + 2 - this->nos);
+            // ADICIONADO: antes o resultado nao aparecia no menu.
+            cout << "Areas pela formula para grafo planar conexo: " << this->areas << endl;
+            cout << "O resultado pressupoe que o grafo seja planar e conexo." << endl;
         }
+        else
+            cout << "O grafo nao passou pelos limites de Euler implementados." << endl;
     }
 
     void mostrar_grafo()
@@ -824,6 +866,27 @@ public:
 
     void coloracao_grafo()
     {
+        // ADICIONADO: coloracao disponivel somente para grafos nao dirigidos.
+        if (this->dirigido)
+        {
+            cout << "Coloracao disponivel somente para grafos nao dirigidos." << endl;
+            return;
+        }
+        // ADICIONADO: antes, grafo vazio acessava cor[-1].
+        if (this->nos == 0)
+        {
+            cout << "O grafo nao possui vertices!" << endl;
+            return;
+        }
+        // ADICIONADO: um laco impede coloracao propria do vertice.
+        for (int i = 0; i < this->nos; i++)
+        {
+            if (this->matriz_adjacencia[i][i] > 0)
+            {
+                cout << "Nao e possivel colorir um grafo com lacos." << endl;
+                return;
+            }
+        }
         int grau[this->nos];
         int saturacao[this->nos];
         int cor[this->nos];
@@ -929,7 +992,8 @@ public:
 
             // escolher cor para colorir
             bool cores_usadas[this->nos + 1];
-            for (int i = 0; i < this->nos; i++)
+            // ALTERADO: era i < nos; agora inicializa tambem a posicao nos.
+            for (int i = 0; i <= this->nos; i++)
             {
                 cores_usadas[i] = false;
             }
@@ -951,6 +1015,10 @@ public:
 
             quantidade_coloridos++;
         }
+        // ADICIONADO: antes as cores eram descartadas sem mostrar resultado.
+        cout << "Coloracao do grafo:" << endl;
+        for (int i = 0; i < this->nos; i++)
+            cout << "Vertice " << i + 1 << ": cor " << cor[i] << endl;
     }
 
     void busca_djikstra(u_int8_t inicial)
@@ -977,6 +1045,8 @@ public:
         }
         // bota origem como 0
         estimativa_custo_min[origem] = 0;
+        // ALTERADO: antes mantinha -1; a origem agora tem ela mesma como predecessor.
+        precedente[origem] = origem;
         // comeca laco verificacao de todos nos
         for (int i = 0; i < this->nos; i++)
         {
@@ -987,15 +1057,15 @@ public:
             {
                 for (int j = 0; j < this->nos; j++)
                 {
-                    //existe conexao entre nos
+                    // existe conexao entre nos
                     if (this->matriz_adjacencia[origem][j] > 0)
                     {
-                        //calcula custo da conexao
+                        // calcula custo da conexao
                         int novo_custo = estimativa_custo_min[origem] + this->matriz_adjacencia[origem][j];
-                        //verifica se conexao ja nao esta fechada e se o custo e menor do que o atual
+                        // verifica se conexao ja nao esta fechada e se o custo e menor do que o atual
                         if (!fechado[j] && estimativa_custo_min[j] > novo_custo)
                         {
-                            //seta os novos valores de custo e precedente novos
+                            // seta os novos valores de custo e precedente novos
                             estimativa_custo_min[j] = novo_custo;
                             precedente[j] = origem;
                         }
@@ -1020,22 +1090,210 @@ public:
             // coloca na origem o valor do proximo
             origem = indice_menor_custo;
         }
-        //imprimir vetores
-        for(int j = 0; j < this->nos; j++){
-            cout<<"No: " << j+1 << " ";
+        // imprimir vetores
+        for (int j = 0; j < this->nos; j++)
+        {
+            cout << "No: " << j + 1 << " ";
         }
-        cout<<endl;
-        for(int j = 0; j < this->nos; j++){
-            cout <<"Cost"<< static_cast<int>(estimativa_custo_min[j]) << " ";
+        cout << endl;
+        for (int j = 0; j < this->nos; j++)
+        {
+            cout << "Cost" << static_cast<int>(estimativa_custo_min[j]) << " ";
         }
-        cout<<endl;
-        for(int j = 0; j < this->nos; j++){
-            cout << "Pre" << static_cast<int>(precedente[j]) +1 << " ";
+        cout << endl;
+        for (int j = 0; j < this->nos; j++)
+        {
+            cout << "Pre" << static_cast<int>(precedente[j]) + 1 << " ";
         }
-        cout<<endl;
+        cout << endl;
+    };
+
+    void a_estrela(int inicio, int destino)
+    {
+        if (!vertice_valido(inicio) || !vertice_valido(destino))
+        {
+            cout << "Vertice inicial ou destino invalido para A*!" << endl;
+            return;
+        }
+
+        int infinito = numeric_limits<int>::max();
+
+        int origem = inicio - 1;
+        int objetivo = destino - 1;
+
+        int *g_custo = new int[this->nos];
+        int *heuristica = new int[this->nos];
+        int *f_custo = new int[this->nos];
+        int *precedente = new int[this->nos];
+
+        // 0 = nao descoberto
+        // 1 = aberto
+        // 2 = fechado
+        int *estado = new int[this->nos];
+
+        // Inicializacao
+        for (int i = 0; i < this->nos; i++)
+        {
+            g_custo[i] = infinito;
+            heuristica[i] = 0;
+            f_custo[i] = infinito;
+            precedente[i] = -1;
+            estado[i] = 0;
+        }
+
+        g_custo[origem] = 0;
+        estado[origem] = 1;
+
+        // Leitura das heuristicas
+        cout << "\nDigite a heuristica de cada vertice ate o destino:\n";
+
+        for (int i = 0; i < this->nos; i++)
+        {
+            if (i == objetivo)
+            {
+                heuristica[i] = 0;
+            }
+            else
+            {
+                cout << "h(" << i + 1 << ") = ";
+                cin >> heuristica[i];
+
+                while (heuristica[i] < 0)
+                {
+                    cout << "A heuristica deve ser maior ou igual a zero.\n";
+
+                    cout << "h(" << i + 1 << ") = ";
+                    cin >> heuristica[i];
+                }
+            }
+        }
+
+        f_custo[origem] =
+            g_custo[origem] + heuristica[origem];
+
+        bool encontrou_caminho = false;
+
+        while (true) // algoritimo A*
+        {
+            int atual = -1;
+            int menor_f_custo = infinito;
+
+            // Procura o vertice aberto com menor f
+            for (int i = 0; i < this->nos; i++)
+            {
+                if (estado[i] == 1 &&
+                    f_custo[i] < menor_f_custo)
+                {
+                    menor_f_custo = f_custo[i];
+                    atual = i;
+                }
+            }
+
+            // Nao existe mais vertice aberto
+            if (atual == -1)
+            {
+                break;
+            }
+
+            // Encontrou o destino
+            if (atual == objetivo)
+            {
+                encontrou_caminho = true;
+
+                cout << "Caminho encontrado!" << endl;
+
+                break;
+            }
+
+            // Fecha o vertice atual
+            estado[atual] = 2;
+
+            // Percorre os adjacentes
+            for (int j = 0; j < this->nos; j++)
+            {
+                if (this->matriz_adjacencia[atual][j] > 0)
+                {
+                    int peso =
+                        this->matriz_adjacencia[atual][j];
+
+                    int novo_g =
+                        g_custo[atual] + peso;
+
+                    if (novo_g < g_custo[j])
+                    {
+                        g_custo[j] = novo_g;
+
+                        precedente[j] = atual;
+
+                        f_custo[j] =
+                            g_custo[j] + heuristica[j];
+
+                        estado[j] = 1;
+                    }
+                }
+            }
+        }
+
+        // mostrando o resultado
+
+        if (encontrou_caminho)
+        {
+            int *caminho = new int[this->nos];
+
+            int tamanho = 0;
+
+            int atual = objetivo;
+
+            while (atual != -1)
+            {
+                caminho[tamanho] = atual;
+                tamanho++;
+
+                if (atual == origem)
+                {
+                    break;
+                }
+
+                atual = precedente[atual];
+            }
+
+            cout << "\nCaminho encontrado: ";
+
+            for (int i = tamanho - 1; i >= 0; i--)
+            {
+                cout << caminho[i] + 1;
+
+                if (i > 0)
+                {
+                    cout << " -> ";
+                }
+            }
+
+            cout << endl;
+
+            cout << "Custo total: "
+                 << g_custo[objetivo]
+                 << endl;
+
+            delete[] caminho;
+        }
+        else
+        {
+            cout << "\nNao existe caminho de "
+                 << inicio
+                 << " ate "
+                 << destino
+                 << "." << endl;
+        }
+
+        // Liberar memoria
+        delete[] g_custo;
+        delete[] heuristica;
+        delete[] f_custo;
+        delete[] precedente;
+        delete[] estado;
     };
 };
-
 void system_pause()
 {
     cout << "Pressione enter para continuar...";
