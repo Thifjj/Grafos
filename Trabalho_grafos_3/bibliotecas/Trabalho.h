@@ -308,7 +308,7 @@ public:
         this->nos = novo_tamanho;
     }
     // cria conexao (aresta/arco)
-    void cria_conexao(int a, int b, u_int8_t custo = 1)
+    void cria_conexao(int a, int b, int custo = 1)
     {
         if (vertice_valido(a) && vertice_valido(b))
         {
@@ -1021,7 +1021,7 @@ public:
             cout << "Vertice " << i + 1 << ": cor " << cor[i] << endl;
     }
 
-    void busca_djikstra(u_int8_t inicial)
+    void busca_djikstra(int inicial)
     {
         if (inicial < 1 || inicial > (this->nos))
         {
@@ -1029,12 +1029,12 @@ public:
             return;
         }
 
-        u_int8_t estimativa_custo_min[this->nos];
-        int8_t precedente[this->nos];
+        int estimativa_custo_min[this->nos];
+        int precedente[this->nos];
         bool fechado[this->nos];
-        u_int8_t menor_custo;
-        u_int8_t indice_menor_custo;
-        u_int8_t origem = inicial - 1;
+        int menor_custo;
+        int indice_menor_custo;
+        int origem = inicial - 1;
 
         // inicializa valores necessarios
         for (int i = 0; i < this->nos; i++)
@@ -1293,26 +1293,58 @@ public:
         delete[] precedente;
         delete[] estado;
     };
-//usando heuristica de vertice adjacente mais proximo
-    void caixeiro_viajante_VADJPROX (int inicio){
-        int fim = -1;
+    
+    // usando heuristica de vertice adjacente mais proximo
+    void caixeiro_viajante_VADJPROX(int inicio)
+    {
+        // fim e a matriz usam base 0; inicio e informado em base 1.
+        int fim = inicio - 1;
         int menor = 100000;
-        int maior = -1;
-        int sequencia[this->nos];
+        int indice_proximo = -1;
+        // sequencia tem nos + 1 posicoes: a ultima guarda o retorno ao inicio.
+        int sequencia[this->nos + 1];
         bool visitados[this->nos];
-        //visitados[0] = inicio;
-        while(fim!=inicio){
-            for(int i = 0; i<this->nos;i++){
-                for(int j = 0; j<this->nos;i++){
-                    if(this->matriz_adjacencia[i][j] > maior && visitados[j]){
-                        maior = matriz_adjacencia[i][j];
-                        sequencia[i] = j;
-                        visitados[j] = j;
+        int custo_total = 0;
+
+        for (int i = 0; i < this->nos; i++)
+        {
+            visitados[i] = false;
+        }
+        sequencia[0] = fim;
+        visitados[fim] = true;
+
+        for (int i = 1; i < this->nos; i++)
+        {
+            for (int j = 0; j < this->nos; j++)
+            {
+                if (this->matriz_adjacencia[fim][j] > 0 && !visitados[j])
+                {
+                    if (this->matriz_adjacencia[fim][j] < menor)
+                    {
+                        menor = matriz_adjacencia[fim][j];
+                        indice_proximo = j;
                     }
                 }
-
             }
+            custo_total += menor;
+            fim = indice_proximo;
+            visitados[indice_proximo] = true;
+            sequencia[i] = indice_proximo;
+            menor = 100000;
         }
+
+        sequencia[this->nos] = inicio - 1;
+        custo_total += this->matriz_adjacencia[fim][inicio - 1];
+
+        cout << "Caminho: ";
+        for (int i = 0; i <= this->nos; i++)
+        {
+            cout << sequencia[i] + 1;
+            if (i < this->nos)
+                cout << " -> ";
+        }
+        cout << endl;
+        cout << "Custo total: " << custo_total << endl;
     }
 };
 void system_pause()

@@ -54,6 +54,7 @@ int main()
         cout << "15 - Verificar ciclo de tamanho 3" << endl;
         cout << "16 - Verificar limites de Euler para planaridade" << endl;
         cout << "17 - Calcular areas" << endl;
+        cout << "18 - Caixeiro viajante (vertice adjacente mais proximo)" << endl;
         cout << "0  - Sair" << endl;
 
         cout << "\nEscolha uma opcao: ";
@@ -599,6 +600,51 @@ int main()
             {
                 g.areas_grafo();
             }
+            atualizarJanela();
+            system_pause();
+            limpar_tela();
+            break;
+        }
+
+        // ==========================================
+        // CAIXEIRO VIAJANTE (vertice adjacente mais proximo)
+        // ==========================================
+        case 18:
+        {
+            if (!grafo_criado || nos < 2)
+            {
+                cout << "O grafo precisa ter ao menos 2 vertices!" << endl;
+                break;
+            }
+            if (eh_dirigido)
+            {
+                cout << "Esta operacao requer um grafo nao dirigido." << endl;
+                break;
+            }
+            // A heuristica exige aresta entre todos os pares de vertices.
+            bool completo = true;
+            for (int i = 1; i <= nos && completo; i++)
+                for (int j = 1; j <= nos; j++)
+                    if (i != j && g.custo_conexao(i, j) <= 0)
+                    {
+                        completo = false;
+                        break;
+                    }
+            if (!completo)
+            {
+                cout << "O grafo precisa ser completo (todos os pares de vertices conectados)." << endl;
+                break;
+            }
+            cout << "===== CAIXEIRO VIAJANTE =====" << endl;
+            cout << "Vertice inicial (-1 para voltar): ";
+            cin >> vertice;
+            if (vertice == -1) break;
+            if (!g.vertice_valido(vertice))
+            {
+                cout << "Vertice invalido!" << endl;
+                break;
+            }
+            g.caixeiro_viajante_VADJPROX(vertice);
             atualizarJanela();
             system_pause();
             limpar_tela();
