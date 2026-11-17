@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.16)
+project(CriadorGrafos LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 17)
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
+add_executable(grafos_gui Interface.cpp)
+target_link_libraries(grafos_gui PRIVATE Qt6::Widgets)
+add_executable(grafos_html Trabalho.cpp)
