@@ -1,4 +1,4 @@
-// Interface grafica (Qt6) do criador de grafos.
+// Grafos Studio - interface grafica (Qt6) do criador de grafos.
 //
 // Uso do editor:
 //   * clique em uma area vazia ........ cria um vertice
@@ -8,6 +8,8 @@
 //   * duplo clique em uma aresta ...... edita o custo
 //   * botao direito ................... menu do vertice / da aresta
 //   * Esc ............................. cancela a conexao em andamento
+//   * Ctrl+N / Ctrl+O / Ctrl+S ........ novo / abrir / salvar
+//   * Setas e Espaco .................. navegam no passo a passo
 #include <QtWidgets>
 #include <cmath>
 #include <functional>
@@ -20,23 +22,133 @@ namespace
 {
 using Par = std::pair<int, int>;
 
-const QColor kVerticePadrao("#4f46e5");
+// ---------- paleta (laranja + branco, grafite como contraste) ----------
+const QColor kVerticePadrao("#f97316");
 const QColor kAberto("#fbbf24");
-const QColor kAtual("#fb923c");
-const QColor kFechado("#34d399");
-const QColor kCaminho("#a78bfa");
-const QColor kArestaPadrao("#4b5b7c");
-const QColor kArestaDestaque("#fbbf24");
-const QColor kAcento("#22d3ee");
+const QColor kAtual("#9a3412");
+const QColor kFechado("#0f766e");
+const QColor kCaminho("#292524");
+const QColor kArestaPadrao("#d6c7b8");
+const QColor kArestaDestaque("#ea580c");
+const QColor kAcento("#c2410c");
+const QColor kTexto("#292524");
+const QColor kTextoSuave("#78716c");
+
+using Legenda = QVector<QPair<QColor, QString>>;
 
 // Estado visual de um passo: cores dos vertices, arestas em destaque e rotulos.
 struct Destaque
 {
-    QMap<int, QColor> cores;      // vertice (base 1) -> cor
-    std::set<Par> arestas;        // arestas em destaque (base 1)
-    QMap<int, QString> rotulos;   // texto exibido abaixo do vertice
+    QMap<int, QColor> cores;    // vertice (base 1) -> cor
+    std::set<Par> arestas;      // arestas em destaque (base 1)
+    QMap<int, QString> rotulos; // texto exibido abaixo do vertice
+    Legenda legenda;            // explicacao das cores
     bool vazio() const { return cores.isEmpty() && arestas.empty() && rotulos.isEmpty(); }
 };
+
+// ---------- icones desenhados em codigo (sem arquivos externos) ----------
+enum class Ico { Play, Pause, Anterior, Proximo, Reiniciar, Circulo, Limpar };
+
+QPixmap desenharIcone(Ico t, const QColor &cor, int tam)
+{
+    const qreal dpr = 2.0;
+    QPixmap pm(int(tam * dpr), int(tam * dpr));
+    pm.setDevicePixelRatio(dpr);
+    pm.fill(Qt::transparent);
+    QPainter p(&pm);
+    p.setRenderHint(QPainter::Antialiasing);
+    const double s = tam;
+    p.setPen(Qt::NoPen);
+    p.setBrush(cor);
+    switch (t)
+    {
+    case Ico::Play:
+        p.drawPolygon(QPolygonF() << QPointF(s * .30, s * .18) << QPointF(s * .30, s * .82) << QPointF(s * .82, s * .50));
+        break;
+    case Ico::Pause:
+        p.drawRoundedRect(QRectF(s * .24, s * .18, s * .17, s * .64), 1.5, 1.5);
+        p.drawRoundedRect(QRectF(s * .59, s * .18, s * .17, s * .64), 1.5, 1.5);
+        break;
+    case Ico::Anterior:
+        p.drawRoundedRect(QRectF(s * .20, s * .20, s * .12, s * .60), 1.5, 1.5);
+        p.drawPolygon(QPolygonF() << QPointF(s * .80, s * .20) << QPointF(s * .80, s * .80) << QPointF(s * .40, s * .50));
+        break;
+    case Ico::Proximo:
+        p.drawRoundedRect(QRectF(s * .68, s * .20, s * .12, s * .60), 1.5, 1.5);
+        p.drawPolygon(QPolygonF() << QPointF(s * .20, s * .20) << QPointF(s * .20, s * .80) << QPointF(s * .60, s * .50));
+        break;
+    case Ico::Reiniciar:
+    {
+        QPen caneta(cor, s * .11, Qt::SolidLine, Qt::RoundCap);
+        p.setPen(caneta);
+        p.setBrush(Qt::NoBrush);
+        p.drawArc(QRectF(s * .20, s * .22, s * .60, s * .60), 40 * 16, 280 * 16);
+        p.setPen(Qt::NoPen);
+        p.setBrush(cor);
+        p.drawPolygon(QPolygonF() << QPointF(s * .86, s * .10) << QPointF(s * .86, s * .42) << QPointF(s * .58, s * .30));
+        break;
+    }
+    case Ico::Circulo:
+    {
+        QPen caneta(cor, s * .09, Qt::SolidLine, Qt::RoundCap);
+        p.setPen(caneta);
+        p.setBrush(Qt::NoBrush);
+        p.drawEllipse(QPointF(s * .5, s * .5), s * .30, s * .30);
+        p.setPen(Qt::NoPen);
+        p.setBrush(cor);
+        for (int k = 0; k < 3; ++k)
+        {
+            double a = 6.2831853 * k / 3 - 1.5707963;
+            p.drawEllipse(QPointF(s * .5 + s * .30 * std::cos(a), s * .5 + s * .30 * std::sin(a)), s * .105, s * .105);
+        }
+        break;
+    }
+    case Ico::Limpar:
+    {
+        QPen caneta(cor, s * .11, Qt::SolidLine, Qt::RoundCap);
+        p.setPen(caneta);
+        p.drawLine(QPointF(s * .28, s * .28), QPointF(s * .72, s * .72));
+        p.drawLine(QPointF(s * .72, s * .28), QPointF(s * .28, s * .72));
+        break;
+    }
+    }
+    return pm;
+}
+
+QIcon icone(Ico t, const QColor &cor = QColor("#9a3412"), int tam = 18)
+{
+    QIcon ic;
+    ic.addPixmap(desenharIcone(t, cor, tam), QIcon::Normal);
+    ic.addPixmap(desenharIcone(t, QColor("#dccbb9"), tam), QIcon::Disabled);
+    return ic;
+}
+
+QPixmap criarLogo(int tam)
+{
+    const qreal dpr = 2.0;
+    QPixmap pm(int(tam * dpr), int(tam * dpr));
+    pm.setDevicePixelRatio(dpr);
+    pm.fill(Qt::transparent);
+    QPainter p(&pm);
+    p.setRenderHint(QPainter::Antialiasing);
+    QLinearGradient gr(0, 0, tam, tam);
+    gr.setColorAt(0, QColor("#fdba74"));
+    gr.setColorAt(0.5, QColor("#f97316"));
+    gr.setColorAt(1, QColor("#c2410c"));
+    p.setPen(Qt::NoPen);
+    p.setBrush(gr);
+    p.drawRoundedRect(QRectF(0, 0, tam, tam), tam * 0.30, tam * 0.30);
+    QPointF a(tam * .27, tam * .70), b(tam * .50, tam * .28), c(tam * .76, tam * .64);
+    p.setPen(QPen(QColor(255, 255, 255, 235), tam * 0.065, Qt::SolidLine, Qt::RoundCap));
+    p.drawLine(a, b);
+    p.drawLine(b, c);
+    p.drawLine(a, c);
+    p.setPen(Qt::NoPen);
+    p.setBrush(Qt::white);
+    for (const QPointF &q : {a, b, c})
+        p.drawEllipse(q, tam * .095, tam * .095);
+    return pm;
+}
 
 // ============================================================
 // Canvas: desenho e interacao com o grafo
@@ -46,16 +158,20 @@ class Canvas : public QWidget
 public:
     const grafo *g = nullptr;
     int n = 0;
+    int arestasTotal = 0;
     bool dirigido = false;
     QVector<QPointF> pos;
     Destaque destaque;
+
+    // widgets sobrepostos (criados pela janela)
+    QWidget *flutuante = nullptr;
+    QWidget *btnExemplo = nullptr;
 
     std::function<void(QPointF)> aoCriarVertice;
     std::function<void(int, int)> aoConectar;
     std::function<void(int, QPoint)> aoMenuVertice;
     std::function<void(int, int, QPoint)> aoMenuAresta;
     std::function<void(int, int)> aoEditarAresta;
-    std::function<void(const QString &)> aoDica;
 
     static constexpr double raio = 23.0;
 
@@ -63,19 +179,47 @@ public:
     {
         setMouseTracking(true);
         setFocusPolicy(Qt::StrongFocus);
-        setMinimumSize(420, 320);
+        setMinimumSize(460, 340);
         setCursor(Qt::CrossCursor);
+        relogio.start();
     }
 
     void cancelarConexao()
     {
-        if (origem >= 0 && aoDica)
-            aoDica(dicaPadrao);
         origem = -1;
+        dica = dicaPadrao;
         update();
     }
-    void definirDicaPadrao(const QString &t) { dicaPadrao = t; }
+    void definirDicaPadrao(const QString &t)
+    {
+        dicaPadrao = t;
+        if (origem < 0)
+            dica = t;
+    }
     bool conectando() const { return origem >= 0; }
+    void resetarHover()
+    {
+        hover = -1;
+        hoverA = hoverB = -1;
+    }
+    void animarCriacao(int i)
+    {
+        criado = i;
+        tCriacao = relogio.elapsed();
+        update();
+    }
+    void mostrarToast(const QString &t)
+    {
+        toast = t;
+        update();
+        QTimer::singleShot(2800, this, [this, t] {
+            if (toast == t)
+            {
+                toast.clear();
+                update();
+            }
+        });
+    }
 
     int verticeEm(const QPointF &p) const
     {
@@ -131,6 +275,27 @@ public:
     }
 
 protected:
+    void resizeEvent(QResizeEvent *e) override
+    {
+        QWidget::resizeEvent(e);
+        const QSize antigo = e->oldSize();
+        if (antigo.width() > 0 && antigo.height() > 0)
+        {
+            double sx = double(width()) / antigo.width(), sy = double(height()) / antigo.height();
+            for (auto &q : pos)
+            {
+                q.setX(qBound(raio + 4, q.x() * sx, qMax(raio + 4, width() - raio - 4.0)));
+                q.setY(qBound(raio + 4, q.y() * sy, qMax(raio + 4, height() - raio - 4.0)));
+            }
+        }
+        posicionarOverlays();
+    }
+    void showEvent(QShowEvent *e) override
+    {
+        QWidget::showEvent(e);
+        posicionarOverlays();
+    }
+
     void keyPressEvent(QKeyEvent *e) override
     {
         if (e->key() == Qt::Key_Escape)
@@ -165,16 +330,10 @@ protected:
         {
             int de = origem;
             origem = -1;
+            dica = dicaPadrao;
             update();
-            if (v >= 0 && v != de)
-            {
-                if (aoDica)
-                    aoDica(dicaPadrao);
-                if (aoConectar)
-                    aoConectar(de, v);
-            }
-            else if (aoDica)
-                aoDica(dicaPadrao);
+            if (v >= 0 && v != de && aoConectar)
+                aoConectar(de, v);
             return;
         }
         if (v >= 0)
@@ -212,7 +371,17 @@ protected:
         else
         {
             hover = verticeEm(p);
-            setCursor(hover >= 0 ? Qt::PointingHandCursor : Qt::CrossCursor);
+            hoverA = hoverB = -1;
+            if (hover < 0)
+            {
+                int ai, aj;
+                if (arestaEm(p, ai, aj))
+                {
+                    hoverA = ai;
+                    hoverB = aj;
+                }
+            }
+            setCursor((hover >= 0 || hoverA >= 0) ? Qt::PointingHandCursor : Qt::CrossCursor);
         }
         update();
     }
@@ -227,8 +396,7 @@ protected:
         if (!moveu)
         {
             origem = v;
-            if (aoDica)
-                aoDica("Clique em outro vertice para conectar a " + QString::number(v + 1) + "  |  Esc cancela");
+            dica = "Clique em outro vértice para conectar ao " + QString::number(v + 1) + "   ·   Esc cancela";
         }
         update();
     }
@@ -242,7 +410,7 @@ protected:
 
     void leaveEvent(QEvent *) override
     {
-        hover = -1;
+        resetarHover();
         update();
     }
 
@@ -250,29 +418,22 @@ protected:
     {
         QPainter p(this);
         p.setRenderHint(QPainter::Antialiasing);
-        QLinearGradient fundo(0, 0, 0, height());
-        fundo.setColorAt(0, QColor("#0b1020"));
-        fundo.setColorAt(1, QColor("#111a33"));
+        precisaAnimar = false;
+
+        QLinearGradient fundo(0, 0, width(), height());
+        fundo.setColorAt(0, QColor("#fffdfa"));
+        fundo.setColorAt(1, QColor("#ffeedd"));
         p.fillRect(rect(), fundo);
         p.setPen(Qt::NoPen);
-        p.setBrush(QColor(255, 255, 255, 26));
+        p.setBrush(QColor(194, 65, 12, 36));
         for (int x = 18; x < width(); x += 28)
             for (int y = 18; y < height(); y += 28)
                 p.drawEllipse(QPointF(x, y), 1.1, 1.1);
 
         if (n == 0)
         {
-            p.setPen(QColor("#64748b"));
-            QFont f = font();
-            f.setPointSize(15);
-            f.setBold(true);
-            p.setFont(f);
-            p.drawText(rect().adjusted(0, -20, 0, 0), Qt::AlignCenter, "Clique em qualquer lugar para criar o primeiro vertice");
-            f.setPointSize(11);
-            f.setBold(false);
-            p.setFont(f);
-            p.setPen(QColor("#475569"));
-            p.drawText(rect().adjusted(0, 40, 0, 0), Qt::AlignCenter, "Depois clique em um vertice e em outro para conectar");
+            desenharVazio(p);
+            desenharToast(p);
             return;
         }
 
@@ -285,38 +446,56 @@ protected:
             int h = verticeEm(cursor);
             if (h >= 0 && h != origem)
                 destino = pos[h];
-            QPen tracejado(kAcento, 2.5, Qt::DashLine);
+            QPen tracejado(kAcento, 2.6, Qt::DashLine);
             tracejado.setCapStyle(Qt::RoundCap);
             p.setPen(tracejado);
             p.drawLine(QLineF(pos[origem], destino));
+            precisaAnimar = true;
         }
         desenharVertices(p);
+        desenharHud(p);
+        desenharLegenda(p);
+        desenharDica(p);
+        desenharToast(p);
 
-        if (origem >= 0)
-        {
-            QString t = "Clique em outro vertice para conectar   -   Esc cancela";
-            QFont f = font();
-            f.setPointSize(11);
-            f.setBold(true);
-            p.setFont(f);
-            QFontMetrics fm(f);
-            QRectF caixa(0, 0, fm.horizontalAdvance(t) + 36, 32);
-            caixa.moveCenter(QPointF(width() / 2.0, height() - 30));
-            p.setPen(QPen(kAcento, 1.2));
-            p.setBrush(QColor(15, 23, 42, 235));
-            p.drawRoundedRect(caixa, 16, 16);
-            p.setPen(QColor("#e2e8f0"));
-            p.drawText(caixa, Qt::AlignCenter, t);
-        }
+        if (precisaAnimar)
+            QTimer::singleShot(30, this, [this] { update(); });
     }
 
 private:
     int origem = -1;
     int arrastando = -1;
     int hover = -1;
+    int hoverA = -1, hoverB = -1;
+    int criado = -1;
+    qint64 tCriacao = 0;
     bool moveu = false;
+    bool precisaAnimar = false;
+    QElapsedTimer relogio;
     QPointF cursor, pressionado, deslocamento;
-    QString dicaPadrao;
+    QString dicaPadrao, dica, toast;
+
+    void posicionarOverlays()
+    {
+        if (flutuante)
+        {
+            flutuante->adjustSize();
+            flutuante->move(width() - flutuante->width() - 16, 16);
+        }
+        if (btnExemplo)
+        {
+            btnExemplo->resize(240, 40);
+            QRectF c = cartaoVazio();
+            btnExemplo->move(int(c.center().x() - 120), int(c.bottom() - 62));
+        }
+    }
+
+    QRectF cartaoVazio() const
+    {
+        QRectF r(0, 0, 500, 310);
+        r.moveCenter(rect().center());
+        return r;
+    }
 
     static double distanciaSegmento(const QPointF &p, const QLineF &l)
     {
@@ -337,19 +516,166 @@ private:
         return destaque.arestas.count(par) > 0;
     }
 
-    void desenharBadge(QPainter &p, QPointF centro, const QString &texto, const QColor &cor, bool forte)
+    static void sombra(QPainter &p, const QRectF &r, double raioCanto, int forca = 14)
+    {
+        p.setPen(Qt::NoPen);
+        for (int k = 1; k <= 5; ++k)
+        {
+            p.setBrush(QColor(124, 45, 18, forca / k + 2));
+            p.drawRoundedRect(r.adjusted(-k * 1.4, -k * 0.6 + 3, k * 1.4, k * 1.8 + 3), raioCanto + k, raioCanto + k);
+        }
+    }
+
+    QFont fonte(int pt, bool negrito) const
     {
         QFont f = font();
-        f.setPointSize(10);
-        f.setBold(true);
+        f.setPointSize(pt);
+        f.setBold(negrito);
+        return f;
+    }
+
+    // ---------- elementos de interface sobre o desenho ----------
+    void desenharVazio(QPainter &p)
+    {
+        QRectF c = cartaoVazio();
+        sombra(p, c, 22, 18);
+        p.setPen(QPen(QColor("#fde4cc"), 1.2));
+        p.setBrush(QColor(255, 255, 255, 248));
+        p.drawRoundedRect(c, 22, 22);
+
+        p.setPen(kTexto);
+        p.setFont(fonte(18, true));
+        p.drawText(QRectF(c.left(), c.top() + 22, c.width(), 34), Qt::AlignCenter, "Comece o seu grafo");
+        p.setPen(kTextoSuave);
+        p.setFont(fonte(10, false));
+        p.drawText(QRectF(c.left(), c.top() + 56, c.width(), 22), Qt::AlignCenter, "Desenhe com o mouse e rode os algoritmos em segundos");
+
+        const QStringList passos = {"Clique no espaço vazio para criar vértices",
+                                    "Clique em um vértice e depois em outro para conectar",
+                                    "Escolha um algoritmo na barra lateral"};
+        double y = c.top() + 98;
+        for (int i = 0; i < passos.size(); ++i)
+        {
+            QRectF bola(0, 0, 26, 26);
+            bola.moveCenter(QPointF(c.left() + 54, y + 13));
+            p.setPen(Qt::NoPen);
+            p.setBrush(i == 2 ? kTexto : kVerticePadrao);
+            p.drawEllipse(bola);
+            p.setPen(Qt::white);
+            p.setFont(fonte(10, true));
+            p.drawText(bola, Qt::AlignCenter, QString::number(i + 1));
+            p.setPen(kTexto);
+            p.setFont(fonte(11, false));
+            p.drawText(QRectF(c.left() + 80, y, c.width() - 100, 26), Qt::AlignVCenter | Qt::AlignLeft, passos[i]);
+            y += 38;
+        }
+    }
+
+    // pilula branca com um ponto colorido; devolve a largura
+    double desenharChip(QPainter &p, QPointF topo, const QString &texto, const QColor &ponto)
+    {
+        QFont f = fonte(10, true);
+        p.setFont(f);
+        QFontMetrics fm(f);
+        QRectF r(topo.x(), topo.y(), fm.horizontalAdvance(texto) + 38, 30);
+        sombra(p, r, 15, 10);
+        p.setPen(QPen(QColor("#fde4cc"), 1));
+        p.setBrush(QColor(255, 255, 255, 245));
+        p.drawRoundedRect(r, 15, 15);
+        p.setPen(Qt::NoPen);
+        p.setBrush(ponto);
+        p.drawEllipse(QPointF(r.left() + 16, r.center().y()), 4.5, 4.5);
+        p.setPen(kTexto);
+        p.drawText(QRectF(r.left() + 28, r.top(), r.width() - 32, r.height()), Qt::AlignVCenter | Qt::AlignLeft, texto);
+        return r.width();
+    }
+
+    void desenharHud(QPainter &p)
+    {
+        double x = 16;
+        x += desenharChip(p, QPointF(x, 16), QString("%1 %2").arg(n).arg(n == 1 ? "vértice" : "vértices"), kVerticePadrao) + 8;
+        x += desenharChip(p, QPointF(x, 16), QString("%1 %2").arg(arestasTotal).arg(arestasTotal == 1 ? "aresta" : "arestas"), kAberto) + 8;
+        desenharChip(p, QPointF(x, 16), dirigido ? "Dirigido" : "Não dirigido", kCaminho);
+    }
+
+    void desenharLegenda(QPainter &p)
+    {
+        if (destaque.legenda.isEmpty())
+            return;
+        QFont f = fonte(10, false);
+        QFontMetrics fm(f);
+        double larg = 0;
+        for (const auto &it : destaque.legenda)
+            larg = qMax(larg, double(fm.horizontalAdvance(it.second)));
+        QRectF r(16, 58, larg + 58, 20 + destaque.legenda.size() * 24 + 8);
+        sombra(p, r, 14, 10);
+        p.setPen(QPen(QColor("#fde4cc"), 1));
+        p.setBrush(QColor(255, 255, 255, 245));
+        p.drawRoundedRect(r, 14, 14);
+        p.setFont(fonte(8, true));
+        p.setPen(QColor("#a8998a"));
+        p.drawText(QRectF(r.left() + 16, r.top() + 8, r.width(), 14), Qt::AlignVCenter | Qt::AlignLeft, "LEGENDA");
+        double y = r.top() + 30;
+        p.setFont(f);
+        for (const auto &it : destaque.legenda)
+        {
+            p.setPen(Qt::NoPen);
+            p.setBrush(it.first);
+            p.drawEllipse(QPointF(r.left() + 20, y), 6, 6);
+            p.setPen(kTexto);
+            p.drawText(QRectF(r.left() + 34, y - 10, r.width() - 40, 20), Qt::AlignVCenter | Qt::AlignLeft, it.second);
+            y += 24;
+        }
+    }
+
+    void desenharDica(QPainter &p)
+    {
+        if (dica.isEmpty())
+            return;
+        bool ativa = origem >= 0;
+        QFont f = fonte(10, ativa);
+        p.setFont(f);
+        QFontMetrics fm(f);
+        QRectF r(0, 0, fm.horizontalAdvance(dica) + 40, 34);
+        r.moveCenter(QPointF(width() / 2.0, height() - 30));
+        sombra(p, r, 17, 12);
+        p.setPen(QPen(ativa ? kAcento : QColor("#fde4cc"), 1.2));
+        p.setBrush(ativa ? kVerticePadrao : QColor(255, 255, 255, 240));
+        p.drawRoundedRect(r, 17, 17);
+        p.setPen(ativa ? QColor("#ffffff") : kTextoSuave);
+        p.drawText(r, Qt::AlignCenter, dica);
+    }
+
+    void desenharToast(QPainter &p)
+    {
+        if (toast.isEmpty())
+            return;
+        QFont f = fonte(10, true);
+        p.setFont(f);
+        QFontMetrics fm(f);
+        QRectF r(0, 0, fm.horizontalAdvance(toast) + 44, 38);
+        r.moveCenter(QPointF(width() / 2.0, 52));
+        sombra(p, r, 19, 22);
+        p.setPen(Qt::NoPen);
+        p.setBrush(kCaminho);
+        p.drawRoundedRect(r, 19, 19);
+        p.setBrush(kVerticePadrao);
+        p.drawEllipse(QPointF(r.left() + 20, r.center().y()), 4.5, 4.5);
+        p.setPen(QColor("#fff7ed"));
+        p.drawText(QRectF(r.left() + 32, r.top(), r.width() - 36, r.height()), Qt::AlignVCenter | Qt::AlignLeft, toast);
+    }
+
+    void desenharBadge(QPainter &p, QPointF centro, const QString &texto, const QColor &cor, bool forte)
+    {
+        QFont f = fonte(10, true);
         p.setFont(f);
         QFontMetrics fm(f);
         QRectF caixa(0, 0, qMax(24, fm.horizontalAdvance(texto) + 14), 20);
         caixa.moveCenter(centro);
         p.setPen(QPen(cor, 1.4));
-        p.setBrush(QColor("#0f172a"));
+        p.setBrush(QColor("#ffffff"));
         p.drawRoundedRect(caixa, 10, 10);
-        p.setPen(forte ? QColor("#fde68a") : QColor("#e2e8f0"));
+        p.setPen(forte ? QColor("#c2410c") : QColor("#44403c"));
         p.drawText(caixa, Qt::AlignCenter, texto);
     }
 
@@ -412,19 +738,40 @@ private:
                 if (peso <= 0 || (!dirigido && j < i))
                     continue;
                 bool forte = arestaEmDestaque(i, j);
-                QColor cor = forte ? kArestaDestaque : kArestaPadrao;
-                QPen caneta(cor, forte ? 4.2 : 2.4);
-                caneta.setCapStyle(Qt::RoundCap);
-                p.setPen(caneta);
+                bool sobre = hoverA == i && hoverB == j;
+                QColor cor = forte ? kArestaDestaque : (sobre ? QColor("#fb923c") : kArestaPadrao);
+                double largura = forte ? 4.2 : (sobre ? 3.6 : 2.4);
                 p.setBrush(Qt::NoBrush);
                 if (i == j)
                 {
                     QPointF c = pos[i] + QPointF(0, -raio - 12);
+                    if (forte)
+                    {
+                        QColor brilho = cor;
+                        brilho.setAlpha(55);
+                        p.setPen(QPen(brilho, largura + 7));
+                        p.drawEllipse(c, 15, 15);
+                    }
+                    QPen caneta(cor, largura);
+                    caneta.setCapStyle(Qt::RoundCap);
+                    p.setPen(caneta);
                     p.drawEllipse(c, 15, 15);
                     etiquetas.append({QLineF(), c + QPointF(0, -26), false, 0.5, QString::number(peso), cor, forte});
                     continue;
                 }
                 QLineF l = linhaAresta(i, j);
+                if (forte)
+                {
+                    QColor brilho = cor;
+                    brilho.setAlpha(55);
+                    QPen halo(brilho, largura + 7);
+                    halo.setCapStyle(Qt::RoundCap);
+                    p.setPen(halo);
+                    p.drawLine(l);
+                }
+                QPen caneta(cor, largura);
+                caneta.setCapStyle(Qt::RoundCap);
+                p.setPen(caneta);
                 p.drawLine(l);
                 if (dirigido && l.length() > 1)
                 {
@@ -444,56 +791,155 @@ private:
         desenharEtiquetas(p, etiquetas);
     }
 
+    static double easeOutBack(double t)
+    {
+        const double c1 = 1.70158, c3 = c1 + 1;
+        return 1 + c3 * std::pow(t - 1, 3) + c1 * std::pow(t - 1, 2);
+    }
+
     void desenharVertices(QPainter &p)
     {
-        QFont f = font();
-        f.setPointSize(13);
-        f.setBold(true);
+        QFont f = fonte(13, true);
+        const qint64 agora = relogio.elapsed();
         for (int i = 0; i < n; ++i)
         {
             QPointF c = pos[i];
             QColor cor = destaque.cores.value(i + 1, kVerticePadrao);
             bool ativo = hover == i || origem == i || arrastando == i;
             bool colorido = destaque.cores.contains(i + 1);
+
+            double escala = 1.0;
+            if (i == criado)
+            {
+                double t = (agora - tCriacao) / 340.0;
+                if (t >= 1.0)
+                    criado = -1;
+                else
+                {
+                    escala = qMax(0.05, easeOutBack(t));
+                    precisaAnimar = true;
+                }
+            }
+            if (ativo)
+                escala *= 1.07;
+            const double r = raio * escala;
+
+            // pulso do vertice em processamento
+            if (colorido && cor == kAtual)
+            {
+                double fase = std::fmod(agora / 1100.0, 1.0);
+                QColor anel = kVerticePadrao;
+                anel.setAlpha(int(170 * (1.0 - fase)));
+                p.setPen(QPen(anel, 3));
+                p.setBrush(Qt::NoBrush);
+                p.drawEllipse(c, r + 5 + fase * 15, r + 5 + fase * 15);
+                precisaAnimar = true;
+            }
             if (ativo || colorido)
             {
-                QRadialGradient brilho(c, raio * 2.0);
-                QColor halo = ativo ? kAcento : cor;
-                halo.setAlpha(ativo ? 120 : 90);
+                QRadialGradient brilho(c, r * 2.0);
+                QColor halo = ativo ? kVerticePadrao : cor;
+                halo.setAlpha(ativo ? 110 : 80);
                 brilho.setColorAt(0.45, halo);
                 halo.setAlpha(0);
                 brilho.setColorAt(1.0, halo);
                 p.setPen(Qt::NoPen);
                 p.setBrush(brilho);
-                p.drawEllipse(c, raio * 2.0, raio * 2.0);
+                p.drawEllipse(c, r * 2.0, r * 2.0);
             }
-            QRadialGradient g2(c - QPointF(7, 8), raio * 1.7);
-            g2.setColorAt(0, cor.lighter(140));
-            g2.setColorAt(1, cor.darker(125));
-            p.setPen(QPen(origem == i ? kAcento : cor.lighter(165), origem == i ? 3.2 : 2.2));
+            // sombra suave
+            p.setPen(Qt::NoPen);
+            p.setBrush(QColor(124, 45, 18, 38));
+            p.drawEllipse(c + QPointF(0, 4), r + 1, r + 1);
+
+            QRadialGradient g2(c - QPointF(7, 8) * escala, r * 1.7);
+            g2.setColorAt(0, cor.lighter(125));
+            g2.setColorAt(1, cor.darker(112));
+            p.setPen(QPen(origem == i ? kAcento : QColor(255, 255, 255), origem == i ? 3.4 : 3.0));
             p.setBrush(g2);
-            p.drawEllipse(c, raio, raio);
+            p.drawEllipse(c, r, r);
             p.setFont(f);
-            p.setPen(cor.lightness() > 150 ? QColor("#0f172a") : QColor("#ffffff"));
-            p.drawText(QRectF(c.x() - raio, c.y() - raio, raio * 2, raio * 2), Qt::AlignCenter, QString::number(i + 1));
+            p.setPen(cor.lightness() > 150 ? QColor("#292524") : QColor("#ffffff"));
+            p.drawText(QRectF(c.x() - r, c.y() - r, r * 2, r * 2), Qt::AlignCenter, QString::number(i + 1));
 
             QString rotulo = destaque.rotulos.value(i + 1);
             if (!rotulo.isEmpty())
             {
-                QFont fr = font();
-                fr.setPointSize(10);
-                fr.setBold(true);
+                QFont fr = fonte(10, true);
                 p.setFont(fr);
                 QFontMetrics fm(fr);
-                QRectF pilula(0, 0, fm.horizontalAdvance(rotulo) + 14, 18);
-                pilula.moveCenter(QPointF(c.x(), c.y() + raio + 13));
-                p.setPen(QPen(QColor("#334155"), 1));
-                p.setBrush(QColor(15, 23, 42, 240));
-                p.drawRoundedRect(pilula, 9, 9);
-                p.setPen(QColor("#e2e8f0"));
+                QRectF pilula(0, 0, fm.horizontalAdvance(rotulo) + 16, 20);
+                pilula.moveCenter(QPointF(c.x(), c.y() + raio + 15));
+                sombra(p, pilula, 10, 8);
+                p.setPen(QPen(QColor("#fdba74"), 1));
+                p.setBrush(QColor(255, 255, 255, 250));
+                p.drawRoundedRect(pilula, 10, 10);
+                p.setPen(QColor("#44403c"));
                 p.drawText(pilula, Qt::AlignCenter, rotulo);
             }
         }
+    }
+};
+
+// ============================================================
+// Cartao de algoritmo (barra lateral)
+// ============================================================
+class Cartao : public QFrame
+{
+public:
+    std::function<void()> aoClicar;
+    QString dicaNormal;
+
+    Cartao(const QString &titulo, const QString &descricao, bool comPassos, QWidget *pai = nullptr) : QFrame(pai), dicaNormal(descricao)
+    {
+        setObjectName("operacao");
+        setCursor(Qt::PointingHandCursor);
+        setAttribute(Qt::WA_Hover);
+        auto l = new QVBoxLayout(this);
+        l->setContentsMargins(14, 11, 14, 12);
+        l->setSpacing(3);
+        auto linha = new QHBoxLayout;
+        linha->setSpacing(6);
+        auto t = new QLabel(titulo);
+        t->setObjectName("opTitulo");
+        t->setWordWrap(true);
+        t->setAttribute(Qt::WA_TransparentForMouseEvents);
+        linha->addWidget(t, 1);
+        if (comPassos)
+        {
+            auto tag = new QLabel("PASSOS");
+            tag->setObjectName("opTag");
+            tag->setAttribute(Qt::WA_TransparentForMouseEvents);
+            linha->addWidget(tag, 0, Qt::AlignTop);
+        }
+        l->addLayout(linha);
+        auto d = new QLabel(descricao);
+        d->setObjectName("opDesc");
+        d->setWordWrap(true);
+        d->setAttribute(Qt::WA_TransparentForMouseEvents);
+        l->addWidget(d);
+        setToolTip(descricao);
+    }
+
+    void definirIndisponivel(const QString &motivo)
+    {
+        bool off = !motivo.isEmpty();
+        setProperty("indisp", off);
+        setToolTip(off ? "Indisponível: " + motivo : dicaNormal);
+        style()->unpolish(this);
+        style()->polish(this);
+        for (auto *lb : findChildren<QLabel *>())
+        {
+            lb->style()->unpolish(lb);
+            lb->style()->polish(lb);
+        }
+    }
+
+protected:
+    void mouseReleaseEvent(QMouseEvent *e) override
+    {
+        if (e->button() == Qt::LeftButton && rect().contains(e->position().toPoint()) && aoClicar)
+            aoClicar();
     }
 };
 
@@ -525,6 +971,14 @@ struct Passo
     QString texto;
 };
 
+struct ItemOp
+{
+    Op op;
+    Cartao *cartao;
+    QLabel *grupo;
+    QString busca;
+};
+
 struct JanelaPrincipal : QMainWindow
 {
     std::unique_ptr<grafo> g;
@@ -534,15 +988,27 @@ struct JanelaPrincipal : QMainWindow
     Canvas *canvas = nullptr;
     QPlainTextEdit *saida = nullptr;
     QTableWidget *tabela = nullptr;
-    QLabel *estatistica = nullptr;
+    QTabWidget *abas = nullptr;
     QCheckBox *modoPassos = nullptr;
-    QAction *acaoDirigido = nullptr;
+    QPushButton *btnDirigido = nullptr, *btnNaoDirigido = nullptr;
     QFrame *barraPassos = nullptr;
-    QLabel *rotuloPasso = nullptr;
-    QPushButton *btnAnterior = nullptr, *btnProximo = nullptr, *btnReiniciar = nullptr;
+    QLabel *rotuloPasso = nullptr, *contadorPasso = nullptr;
+    QSlider *controlePasso = nullptr;
+    QPushButton *btnAnterior = nullptr, *btnProximo = nullptr, *btnReiniciar = nullptr, *btnPlay = nullptr, *btnVelocidade = nullptr;
+    QTimer *relogioPlay = nullptr;
     QVector<Passo> passos;
     int passoAtual = -1;
+    int velocidade = 1; // indice em kVelocidades
     QVector<OpInfo> operacoes;
+    QVector<ItemOp> itens;
+    QLineEdit *busca = nullptr;
+
+    static constexpr int kIntervalos[4] = {1500, 900, 450, 180};
+    static const char *rotuloVelocidade(int i)
+    {
+        static const char *r[4] = {"0.5×", "1×", "2×", "4×"};
+        return r[i];
+    }
 
     static Par par(int a, int b, bool dir)
     {
@@ -554,226 +1020,488 @@ struct JanelaPrincipal : QMainWindow
     JanelaPrincipal()
     {
         setWindowTitle("Grafos Studio");
-        resize(1360, 860);
+        setWindowIcon(QIcon(criarLogo(64)));
+        resize(1440, 900);
+        setMinimumSize(1120, 720);
         g = std::make_unique<grafo>();
         g->inicializa_grafo(0, false);
 
         operacoes = {
-            {Op::BFS, "Busca em largura (BFS)", "Percorre o grafo por niveis a partir de um vertice", true, false, false, true},
-            {Op::DFS, "Busca em profundidade (DFS)", "Percorre o grafo em profundidade a partir de um vertice", true, false, false, true},
-            {Op::FechoDireto, "Fecho transitivo direto", "Vertices alcancaveis a partir de um vertice", true, false, false, false},
-            {Op::FechoInverso, "Fecho transitivo inverso", "Vertices que alcancam um vertice", true, false, false, false},
-            {Op::Componentes, "Componentes conexos / SFCMs", "Componentes conexos (ou fortemente conexos)", false, false, false, false},
-            {Op::Dijkstra, "Dijkstra", "Menores caminhos a partir de um vertice", true, false, false, true},
-            {Op::AEstrela, "A* (heuristica zero)", "Menor caminho entre dois vertices", true, true, false, true},
-            {Op::Coloracao, "Coloracao de vertices", "Coloracao propria (grafos nao dirigidos)", false, false, true, true},
-            {Op::Ciclo3, "Ciclo de tamanho 3", "Verifica a existencia de triangulos", false, false, true, false},
-            {Op::Euler, "Limites de Euler (planaridade)", "Verifica os limites de Euler", false, false, true, false},
-            {Op::Areas, "Areas do grafo", "Calcula as areas (faces)", false, false, true, false},
-            {Op::Caixeiro, "Vertice adjacente mais proximo", "Heuristica do vizinho mais proximo (grafo completo, nao dirigido)", true, false, true, true},
+            {Op::BFS, "Busca em largura (BFS)", "Percorre o grafo por níveis a partir de um vértice.", true, false, false, true},
+            {Op::DFS, "Busca em profundidade (DFS)", "Percorre o grafo mergulhando em cada ramo.", true, false, false, true},
+            {Op::FechoDireto, "Fecho transitivo direto", "Vértices alcançáveis a partir de um vértice.", true, false, false, false},
+            {Op::FechoInverso, "Fecho transitivo inverso", "Vértices que conseguem alcançar um vértice.", true, false, false, false},
+            {Op::Componentes, "Componentes conexos / SFCMs", "Separa o grafo em componentes (fortemente) conexos.", false, false, false, false},
+            {Op::Dijkstra, "Dijkstra", "Menores caminhos a partir de um vértice.", true, false, false, true},
+            {Op::AEstrela, "A* (heurística zero)", "Menor caminho entre dois vértices.", true, true, false, true},
+            {Op::Coloracao, "Coloração de vértices", "Colore sem vizinhos iguais (não dirigido).", false, false, true, true},
+            {Op::Ciclo3, "Ciclo de tamanho 3", "Procura triângulos no grafo.", false, false, true, false},
+            {Op::Euler, "Limites de Euler (planaridade)", "Verifica os limites de Euler para planaridade.", false, false, true, false},
+            {Op::Areas, "Áreas do grafo", "Calcula as áreas (faces) do grafo.", false, false, true, false},
+            {Op::Caixeiro, "Vizinho mais próximo", "Heurística do caixeiro viajante (grafo completo, não dirigido).", true, false, true, true},
         };
 
         construirInterface();
-        statusBar()->showMessage(dicaPadrao());
         atualizar();
     }
 
     static QString dicaPadrao()
     {
-        return "Clique no espaco vazio para criar um vertice  |  clique em um vertice e depois em outro para conectar  |  arraste para mover  |  botao direito para opcoes";
+        return "Clique no espaço vazio para criar um vértice   ·   clique em dois vértices para conectar   ·   botão direito para opções";
     }
 
     // -------------------------------------------------------
     // Construcao da interface
     // -------------------------------------------------------
-    void construirInterface()
+    QWidget *criarCabecalho()
     {
-        // barra de ferramentas
-        auto barra = addToolBar("Principal");
-        barra->setMovable(false);
-        barra->setToolButtonStyle(Qt::ToolButtonTextOnly);
-        auto titulo = new QLabel("  GRAFOS <span style='color:#22d3ee'>STUDIO</span>  ");
-        titulo->setObjectName("titulo");
-        barra->addWidget(titulo);
-        barra->addSeparator();
-        barra->addAction("Novo", this, [this] { novoGrafo(); });
-        barra->addAction("Abrir...", this, [this] { abrirArquivo(); });
-        barra->addAction("Salvar...", this, [this] { salvarArquivo(); });
-        barra->addSeparator();
-        acaoDirigido = barra->addAction("Grafo dirigido");
-        acaoDirigido->setCheckable(true);
-        acaoDirigido->setToolTip("Alterna entre grafo dirigido e nao dirigido (mantem as conexoes)");
-        connect(acaoDirigido, &QAction::toggled, this, [this](bool v) { alternarDirigido(v); });
-        barra->addAction("Organizar em circulo", this, [this] { organizarCirculo(); });
-        barra->addAction("Limpar destaques", this, [this] { limparResultado(true); });
+        auto cab = new QFrame;
+        cab->setObjectName("cabecalho");
+        auto l = new QHBoxLayout(cab);
+        l->setContentsMargins(22, 12, 22, 12);
+        l->setSpacing(10);
 
-        // painel esquerdo
-        auto esquerda = new QWidget;
-        esquerda->setObjectName("painelEsquerdo");
-        auto esqLayout = new QVBoxLayout(esquerda);
-        esqLayout->setContentsMargins(14, 14, 14, 14);
-        esqLayout->setSpacing(6);
+        auto logo = new QLabel;
+        logo->setPixmap(criarLogo(42));
+        l->addWidget(logo);
+        auto textos = new QVBoxLayout;
+        textos->setSpacing(0);
+        auto t1 = new QLabel("Grafos <span style='color:#ea580c'>Studio</span>");
+        t1->setObjectName("logoTitulo");
+        auto t2 = new QLabel("Crie, edite e visualize algoritmos em grafos");
+        t2->setObjectName("logoSub");
+        textos->addWidget(t1);
+        textos->addWidget(t2);
+        l->addLayout(textos);
+        l->addSpacing(26);
 
+        auto acao = [&](const QString &texto, const QString &dica, const QKeySequence &atalho, std::function<void()> fn) {
+            auto b = new QPushButton(texto);
+            b->setObjectName("ghost");
+            b->setToolTip(dica + (atalho.isEmpty() ? "" : "  (" + atalho.toString(QKeySequence::NativeText) + ")"));
+            b->setCursor(Qt::PointingHandCursor);
+            if (!atalho.isEmpty())
+                b->setShortcut(atalho);
+            connect(b, &QPushButton::clicked, this, [fn] { fn(); });
+            l->addWidget(b);
+            return b;
+        };
+        acao("Novo", "Começa um grafo vazio", QKeySequence::New, [this] { novoGrafo(); });
+        acao("Abrir", "Abre um grafo salvo", QKeySequence::Open, [this] { abrirArquivo(); });
+        acao("Salvar", "Salva o grafo em arquivo", QKeySequence::Save, [this] { salvarArquivo(); });
+        l->addStretch();
+
+        // seletor segmentado: nao dirigido / dirigido
+        auto seg = new QFrame;
+        seg->setObjectName("segmentoWrap");
+        auto sl = new QHBoxLayout(seg);
+        sl->setContentsMargins(4, 4, 4, 4);
+        sl->setSpacing(2);
+        btnNaoDirigido = new QPushButton("Não dirigido");
+        btnDirigido = new QPushButton("Dirigido");
+        for (auto *b : {btnNaoDirigido, btnDirigido})
+        {
+            b->setObjectName("segmento");
+            b->setCheckable(true);
+            b->setAutoExclusive(true);
+            b->setCursor(Qt::PointingHandCursor);
+            sl->addWidget(b);
+        }
+        btnNaoDirigido->setChecked(true);
+        btnDirigido->setToolTip("Alterna o tipo do grafo mantendo as conexões");
+        connect(btnDirigido, &QPushButton::toggled, this, [this](bool v) { alternarDirigido(v); });
+        l->addWidget(seg);
+        l->addSpacing(8);
+
+        auto ajuda = new QPushButton("?");
+        ajuda->setObjectName("ajuda");
+        ajuda->setFixedSize(34, 34);
+        ajuda->setToolTip("Como usar (F1)");
+        ajuda->setCursor(Qt::PointingHandCursor);
+        ajuda->setShortcut(QKeySequence(Qt::Key_F1));
+        connect(ajuda, &QPushButton::clicked, this, [this] { mostrarAjuda(); });
+        l->addWidget(ajuda);
+        return cab;
+    }
+
+    QWidget *criarLateral()
+    {
+        auto lateral = new QWidget;
+        lateral->setObjectName("lateral");
+        lateral->setFixedWidth(340);
+        auto ll = new QVBoxLayout(lateral);
+        ll->setContentsMargins(18, 18, 10, 0);
+        ll->setSpacing(12);
+
+        busca = new QLineEdit;
+        busca->setObjectName("busca");
+        busca->setPlaceholderText("Buscar algoritmo...");
+        busca->setClearButtonEnabled(true);
+        connect(busca, &QLineEdit::textChanged, this, [this](const QString &t) { filtrar(t); });
+        ll->addWidget(busca);
+
+        auto modo = new QFrame;
+        modo->setObjectName("cartaoModo");
+        auto ml = new QVBoxLayout(modo);
+        ml->setContentsMargins(14, 10, 14, 10);
+        ml->setSpacing(2);
         modoPassos = new QCheckBox("Executar passo a passo");
+        modoPassos->setObjectName("interruptor");
         modoPassos->setChecked(true);
-        modoPassos->setToolTip("Mostra a execucao do algoritmo em etapas sobre o desenho do grafo");
+        modoPassos->setCursor(Qt::PointingHandCursor);
+        modoPassos->setToolTip("Mostra a execução do algoritmo em etapas sobre o desenho do grafo");
+        auto md = new QLabel("Veja cada decisão do algoritmo no grafo, com controle de velocidade.");
+        md->setObjectName("opDesc");
+        md->setWordWrap(true);
+        ml->addWidget(modoPassos);
+        ml->addWidget(md);
+        ll->addWidget(modo);
+
+        auto lista = new QWidget;
+        lista->setObjectName("listaOps");
+        auto lv = new QVBoxLayout(lista);
+        lv->setContentsMargins(0, 4, 8, 20);
+        lv->setSpacing(8);
 
         auto grupo = [&](const QString &nome, std::initializer_list<Op> ops) {
-            auto rotulo = new QLabel(nome);
+            auto rotulo = new QLabel(nome.toUpper());
             rotulo->setObjectName("grupo");
-            esqLayout->addSpacing(6);
-            esqLayout->addWidget(rotulo);
+            lv->addSpacing(8);
+            lv->addWidget(rotulo);
             for (Op op : ops)
                 for (const auto &info : operacoes)
                     if (info.op == op)
                     {
-                        auto b = new QPushButton(info.nome);
-                        b->setObjectName("operacao");
-                        b->setToolTip(info.dica);
-                        b->setCursor(Qt::PointingHandCursor);
-                        esqLayout->addWidget(b);
+                        auto c = new Cartao(info.nome, info.dica, info.passos);
                         Op o = info.op;
-                        connect(b, &QPushButton::clicked, this, [this, o] { acionarOperacao(o); });
+                        c->aoClicar = [this, o] { acionarOperacao(o); };
+                        lv->addWidget(c);
+                        itens.append({o, c, rotulo, (info.nome + " " + info.dica + " " + nome).toLower()});
                     }
         };
-        auto cab = new QLabel("ALGORITMOS");
-        cab->setObjectName("secao");
-        esqLayout->addWidget(cab);
-        esqLayout->addWidget(modoPassos);
         grupo("Percursos", {Op::BFS, Op::DFS, Op::FechoDireto, Op::FechoInverso, Op::Componentes});
-        grupo("Caminhos minimos", {Op::Dijkstra, Op::AEstrela});
+        grupo("Caminhos mínimos", {Op::Dijkstra, Op::AEstrela});
         grupo("Propriedades", {Op::Coloracao, Op::Ciclo3, Op::Euler, Op::Areas});
         grupo("Caixeiro viajante", {Op::Caixeiro});
-        esqLayout->addStretch();
+        lv->addStretch();
+
         auto scroll = new QScrollArea;
-        scroll->setWidget(esquerda);
+        scroll->setWidget(lista);
         scroll->setWidgetResizable(true);
-        scroll->setFixedWidth(290);
         scroll->setFrameShape(QFrame::NoFrame);
         scroll->setObjectName("scrollEsquerdo");
+        scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        ll->addWidget(scroll, 1);
+        return lateral;
+    }
+
+    QWidget *criarBarraPassos()
+    {
+        barraPassos = new QFrame;
+        barraPassos->setObjectName("barraPassos");
+        auto v = new QVBoxLayout(barraPassos);
+        v->setContentsMargins(20, 12, 20, 14);
+        v->setSpacing(8);
+
+        auto topo = new QHBoxLayout;
+        rotuloPasso = new QLabel("Passo");
+        rotuloPasso->setObjectName("passoTitulo");
+        contadorPasso = new QLabel("1 / 1");
+        contadorPasso->setObjectName("contador");
+        topo->addWidget(rotuloPasso, 1);
+        topo->addWidget(contadorPasso);
+        v->addLayout(topo);
+
+        auto linha = new QHBoxLayout;
+        linha->setSpacing(6);
+        btnReiniciar = botaoIcone(Ico::Reiniciar, "Reiniciar do primeiro passo");
+        btnAnterior = botaoIcone(Ico::Anterior, "Passo anterior  (←)");
+        btnPlay = botaoIcone(Ico::Play, "Reproduzir automaticamente  (Espaço)", QColor("#ffffff"));
+        btnPlay->setObjectName("play");
+        btnPlay->setFixedSize(42, 42);
+        btnPlay->setIconSize(QSize(20, 20));
+        btnProximo = botaoIcone(Ico::Proximo, "Próximo passo  (→)");
+        controlePasso = new QSlider(Qt::Horizontal);
+        controlePasso->setCursor(Qt::PointingHandCursor);
+        btnVelocidade = new QPushButton(rotuloVelocidade(velocidade));
+        btnVelocidade->setObjectName("ghost");
+        btnVelocidade->setFixedWidth(54);
+        btnVelocidade->setToolTip("Velocidade da reprodução");
+        btnVelocidade->setCursor(Qt::PointingHandCursor);
+        auto btnConcluir = new QPushButton("Encerrar");
+        btnConcluir->setObjectName("ghost");
+        btnConcluir->setCursor(Qt::PointingHandCursor);
+        linha->addWidget(btnReiniciar);
+        linha->addWidget(btnAnterior);
+        linha->addWidget(btnPlay);
+        linha->addWidget(btnProximo);
+        linha->addSpacing(10);
+        linha->addWidget(controlePasso, 1);
+        linha->addSpacing(10);
+        linha->addWidget(btnVelocidade);
+        linha->addWidget(btnConcluir);
+        v->addLayout(linha);
+        barraPassos->hide();
+
+        relogioPlay = new QTimer(this);
+        connect(relogioPlay, &QTimer::timeout, this, [this] {
+            if (passoAtual + 1 < passos.size())
+                irParaPasso(passoAtual + 1);
+            else
+                pararPlay();
+        });
+        connect(btnProximo, &QPushButton::clicked, this, [this] { pararPlay(); irParaPasso(passoAtual + 1); });
+        connect(btnAnterior, &QPushButton::clicked, this, [this] { pararPlay(); irParaPasso(passoAtual - 1); });
+        connect(btnReiniciar, &QPushButton::clicked, this, [this] { pararPlay(); irParaPasso(0); });
+        connect(btnPlay, &QPushButton::clicked, this, [this] { alternarPlay(); });
+        connect(btnConcluir, &QPushButton::clicked, this, [this] { limparResultado(true); });
+        connect(controlePasso, &QSlider::valueChanged, this, [this](int i) {
+            if (i != passoAtual)
+            {
+                pararPlay();
+                irParaPasso(i);
+            }
+        });
+        connect(btnVelocidade, &QPushButton::clicked, this, [this] {
+            velocidade = (velocidade + 1) % 4;
+            btnVelocidade->setText(rotuloVelocidade(velocidade));
+            if (relogioPlay->isActive())
+                relogioPlay->start(kIntervalos[velocidade]);
+        });
+
+        // atalhos de teclado do passo a passo
+        auto atalho = [this](Qt::Key k, std::function<void()> fn) {
+            auto s = new QShortcut(QKeySequence(k), this);
+            connect(s, &QShortcut::activated, this, [this, fn] {
+                if (barraPassos->isVisible())
+                    fn();
+            });
+        };
+        atalho(Qt::Key_Right, [this] { pararPlay(); irParaPasso(passoAtual + 1); });
+        atalho(Qt::Key_Left, [this] { pararPlay(); irParaPasso(passoAtual - 1); });
+        atalho(Qt::Key_Space, [this] { alternarPlay(); });
+        return barraPassos;
+    }
+
+    QPushButton *botaoIcone(Ico ic, const QString &dica, const QColor &cor = QColor("#9a3412"))
+    {
+        auto b = new QPushButton;
+        b->setObjectName("icone");
+        b->setIcon(icone(ic, cor, 20));
+        b->setIconSize(QSize(18, 18));
+        b->setFixedSize(38, 38);
+        b->setToolTip(dica);
+        b->setCursor(Qt::PointingHandCursor);
+        return b;
+    }
+
+    void construirInterface()
+    {
+        auto central = new QWidget;
+        auto raiz = new QVBoxLayout(central);
+        raiz->setContentsMargins(0, 0, 0, 0);
+        raiz->setSpacing(0);
+        raiz->addWidget(criarCabecalho());
 
         // area do canvas
         canvas = new Canvas;
         canvas->g = g.get();
         canvas->definirDicaPadrao(dicaPadrao());
-        canvas->aoDica = [this](const QString &t) { statusBar()->showMessage(t); };
         canvas->aoCriarVertice = [this](QPointF p) { adicionarVertice(p); };
         canvas->aoConectar = [this](int a, int b) { conectar(a, b); };
         canvas->aoEditarAresta = [this](int a, int b) { conectar(a, b); };
         canvas->aoMenuVertice = [this](int v, QPoint gp) { menuVertice(v, gp); };
         canvas->aoMenuAresta = [this](int a, int b, QPoint gp) { menuAresta(a, b, gp); };
 
-        barraPassos = new QFrame;
-        barraPassos->setObjectName("barraPassos");
-        auto bl = new QHBoxLayout(barraPassos);
-        bl->setContentsMargins(14, 8, 14, 8);
-        rotuloPasso = new QLabel("Passo");
-        rotuloPasso->setObjectName("passo");
-        btnAnterior = new QPushButton("<  Anterior");
-        btnProximo = new QPushButton("Proximo  >");
-        btnProximo->setObjectName("primario");
-        btnReiniciar = new QPushButton("Reiniciar");
-        auto btnConcluir = new QPushButton("Encerrar");
-        bl->addWidget(rotuloPasso, 1);
-        bl->addWidget(btnAnterior);
-        bl->addWidget(btnProximo);
-        bl->addWidget(btnReiniciar);
-        bl->addWidget(btnConcluir);
-        barraPassos->hide();
-        connect(btnProximo, &QPushButton::clicked, this, [this] { irParaPasso(passoAtual + 1); });
-        connect(btnAnterior, &QPushButton::clicked, this, [this] { irParaPasso(passoAtual - 1); });
-        connect(btnReiniciar, &QPushButton::clicked, this, [this] { irParaPasso(0); });
-        connect(btnConcluir, &QPushButton::clicked, this, [this] { limparResultado(true); });
+        // ferramentas flutuantes (canto superior direito do canvas)
+        auto flut = new QFrame(canvas);
+        flut->setObjectName("flutuante");
+        auto fl = new QHBoxLayout(flut);
+        fl->setContentsMargins(6, 6, 6, 6);
+        fl->setSpacing(4);
+        auto fbtn = [&](Ico ic, const QString &dica, std::function<void()> fn) {
+            auto b = new QToolButton;
+            b->setObjectName("flutuanteBtn");
+            b->setIcon(icone(ic, QColor("#9a3412"), 20));
+            b->setIconSize(QSize(18, 18));
+            b->setToolTip(dica);
+            b->setCursor(Qt::PointingHandCursor);
+            connect(b, &QToolButton::clicked, this, [fn] { fn(); });
+            fl->addWidget(b);
+        };
+        fbtn(Ico::Circulo, "Organizar vértices em círculo", [this] { organizarCirculo(); });
+        fbtn(Ico::Limpar, "Limpar destaques e resultado", [this] { limparResultado(true); });
+        canvas->flutuante = flut;
+
+        // botao do estado vazio
+        auto ex = new QPushButton("Carregar grafo de exemplo", canvas);
+        ex->setObjectName("primario");
+        ex->setCursor(Qt::PointingHandCursor);
+        connect(ex, &QPushButton::clicked, this, [this] { carregarExemplo(); });
+        canvas->btnExemplo = ex;
 
         auto areaCanvas = new QWidget;
         auto acl = new QVBoxLayout(areaCanvas);
         acl->setContentsMargins(0, 0, 0, 0);
         acl->setSpacing(0);
         acl->addWidget(canvas, 1);
-        acl->addWidget(barraPassos);
+        acl->addWidget(criarBarraPassos());
 
         // abas inferiores
-        auto abas = new QTabWidget;
+        abas = new QTabWidget;
+        abas->setDocumentMode(true);
         saida = new QPlainTextEdit;
         saida->setReadOnly(true);
-        saida->setPlaceholderText("O resultado dos algoritmos aparece aqui.");
-        saida->setFont(QFont("monospace", 11));
+        saida->setPlaceholderText("O resultado dos algoritmos aparece aqui.\nEscolha um algoritmo na barra lateral para começar.");
+        saida->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
         tabela = new QTableWidget;
         tabela->setEditTriggers(QAbstractItemView::NoEditTriggers);
         tabela->setSelectionMode(QAbstractItemView::NoSelection);
-        tabela->horizontalHeader()->setDefaultSectionSize(44);
-        tabela->verticalHeader()->setDefaultSectionSize(30);
+        tabela->setShowGrid(true);
+        tabela->horizontalHeader()->setDefaultSectionSize(46);
+        tabela->verticalHeader()->setDefaultSectionSize(32);
         abas->addTab(saida, "Resultado");
-        abas->addTab(tabela, "Matriz de adjacencia");
+        abas->addTab(tabela, "Matriz de adjacência");
 
         auto divisor = new QSplitter(Qt::Vertical);
+        divisor->setHandleWidth(3);
         divisor->addWidget(areaCanvas);
         divisor->addWidget(abas);
         divisor->setStretchFactor(0, 4);
         divisor->setStretchFactor(1, 1);
-        divisor->setSizes({620, 200});
+        divisor->setSizes({640, 200});
+        divisor->setCollapsible(0, false);
 
-        auto central = new QWidget;
-        auto cl = new QHBoxLayout(central);
-        cl->setContentsMargins(0, 0, 0, 0);
-        cl->setSpacing(0);
-        cl->addWidget(scroll);
-        cl->addWidget(divisor, 1);
+        auto corpo = new QHBoxLayout;
+        corpo->setContentsMargins(0, 0, 0, 0);
+        corpo->setSpacing(0);
+        corpo->addWidget(criarLateral());
+        corpo->addWidget(divisor, 1);
+        raiz->addLayout(corpo, 1);
         setCentralWidget(central);
-
-        estatistica = new QLabel;
-        estatistica->setObjectName("estatistica");
-        statusBar()->addPermanentWidget(estatistica);
+        statusBar()->hide();
 
         setStyleSheet(estilo());
     }
 
     static QString estilo()
     {
-        return R"(
-QWidget { font-size: 13px; color: #e5e7eb; }
-QMainWindow, QWidget#painelEsquerdo, QScrollArea#scrollEsquerdo { background: #0f172a; }
-QToolBar { background: #0b1220; border: none; border-bottom: 1px solid #1e293b; padding: 6px 10px; spacing: 6px; }
-QToolBar QLabel#titulo { font-size: 15px; font-weight: 800; letter-spacing: 2px; color: #f8fafc; }
-QToolButton { background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 7px 14px; color: #cbd5e1; font-weight: 600; }
-QToolButton:hover { background: #1e293b; color: #ffffff; }
-QToolButton:checked { background: #4338ca; color: #ffffff; border-color: #6366f1; }
-QLabel#secao { font-size: 11px; font-weight: 800; letter-spacing: 2px; color: #64748b; padding-bottom: 4px; }
-QLabel#grupo { font-size: 12px; font-weight: 700; color: #22d3ee; padding-top: 6px; }
-QPushButton { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 8px 14px; color: #e2e8f0; font-weight: 600; }
-QPushButton:hover { background: #273449; border-color: #475569; }
-QPushButton:pressed { background: #0f172a; }
-QPushButton:disabled { color: #475569; background: #172033; border-color: #1e293b; }
-QPushButton#operacao { text-align: left; padding: 9px 12px; background: #131c31; }
-QPushButton#operacao:hover { background: #1e2a4a; border-color: #6366f1; color: #ffffff; }
-QPushButton#primario { background: #4f46e5; border-color: #6366f1; color: white; }
-QPushButton#primario:hover { background: #6366f1; }
-QPushButton#primario:disabled { background: #1e1b4b; color: #4b5563; border-color: #312e81; }
-QCheckBox { spacing: 8px; color: #cbd5e1; padding: 4px 0 6px 0; }
-QCheckBox::indicator { width: 18px; height: 18px; border-radius: 5px; border: 1px solid #475569; background: #0b1220; }
-QCheckBox::indicator:checked { background: #6366f1; border-color: #818cf8; }
-QFrame#barraPassos { background: #0b1220; border-top: 1px solid #1e293b; }
-QLabel#passo { font-weight: 700; color: #fde68a; }
-QTabWidget::pane { border: none; border-top: 1px solid #1e293b; background: #0b1220; }
-QTabBar::tab { background: transparent; color: #94a3b8; padding: 9px 18px; border: none; font-weight: 600; }
-QTabBar::tab:selected { color: #ffffff; border-bottom: 2px solid #22d3ee; }
-QPlainTextEdit, QTableWidget { background: #0b1220; border: none; color: #e2e8f0; selection-background-color: #3730a3; gridline-color: #1e293b; }
-QHeaderView::section { background: #111a2e; color: #94a3b8; border: none; border-right: 1px solid #1e293b; border-bottom: 1px solid #1e293b; padding: 4px; font-weight: 700; }
-QStatusBar { background: #0b1220; color: #94a3b8; border-top: 1px solid #1e293b; }
-QLabel#estatistica { color: #22d3ee; font-weight: 700; padding-right: 10px; }
-QSplitter::handle { background: #1e293b; height: 2px; }
-QScrollBar:vertical { background: transparent; width: 10px; }
-QScrollBar::handle:vertical { background: #334155; border-radius: 5px; min-height: 30px; }
-QScrollBar::add-line, QScrollBar::sub-line { height: 0; }
-QMenu { background: #111a2e; border: 1px solid #334155; border-radius: 8px; padding: 6px; }
-QMenu::item { padding: 7px 22px; border-radius: 5px; }
-QMenu::item:selected { background: #4338ca; }
-QMenu::item:disabled { color: #22d3ee; font-weight: 700; }
-QMenu::separator { height: 1px; background: #1e293b; margin: 5px 8px; }
-QDialog, QMessageBox, QInputDialog { background: #0f172a; }
-QSpinBox { background: #0b1220; border: 1px solid #334155; border-radius: 6px; padding: 6px; }
-QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; padding: 4px; }
+        // marca de selecao do checkbox, gerada em tempo de execucao
+        QString caminhoCheck = QDir::temp().filePath("grafos_studio_check.png");
+        {
+            QPixmap pm(40, 40);
+            pm.fill(Qt::transparent);
+            QPainter p(&pm);
+            p.setRenderHint(QPainter::Antialiasing);
+            p.setPen(QPen(Qt::white, 5, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+            p.drawPolyline(QPolygonF() << QPointF(10, 21) << QPointF(17, 28) << QPointF(30, 12));
+            pm.save(caminhoCheck);
+        }
+        QString css = R"(
+QWidget { font-family: "Inter", "Segoe UI", "Noto Sans", "Ubuntu", "Helvetica Neue", sans-serif; font-size: 13px; color: #292524; }
+QMainWindow, QWidget#lateral, QScrollArea#scrollEsquerdo, QWidget#listaOps { background: #fff8f1; }
+QToolTip { background: #1c1917; color: #fff7ed; border: none; padding: 6px 8px; }
+
+/* ---------- cabecalho ---------- */
+QFrame#cabecalho { background: #ffffff; border-bottom: 1px solid #f5e6d8; }
+QLabel#logoTitulo { font-size: 19px; font-weight: 800; color: #1c1917; }
+QLabel#logoSub { font-size: 12px; color: #a8998a; }
+QPushButton#ghost { background: transparent; border: 1px solid transparent; border-radius: 10px; padding: 8px 14px; color: #57534e; font-weight: 700; }
+QPushButton#ghost:hover { background: #ffedd5; color: #9a3412; }
+QPushButton#ghost:pressed { background: #fed7aa; }
+QFrame#segmentoWrap { background: #fff1e3; border: 1px solid #fde4cc; border-radius: 12px; }
+QPushButton#segmento { background: transparent; border: none; border-radius: 9px; padding: 7px 16px; color: #78716c; font-weight: 700; }
+QPushButton#segmento:hover { color: #9a3412; }
+QPushButton#segmento:checked { background: #f97316; color: #ffffff; }
+QPushButton#ajuda { background: #ffffff; border: 1px solid #fde4cc; border-radius: 17px; color: #ea580c; font-weight: 800; font-size: 15px; padding: 0; }
+QPushButton#ajuda:hover { background: #f97316; color: #ffffff; border-color: #f97316; }
+
+/* ---------- lateral ---------- */
+QLineEdit#busca { background: #ffffff; border: 1px solid #f1dfcf; border-radius: 12px; padding: 10px 14px; }
+QLineEdit#busca:focus { border: 1.5px solid #f97316; }
+QFrame#cartaoModo { background: #ffffff; border: 1px solid #f5e6d8; border-radius: 14px; }
+QCheckBox { spacing: 10px; font-weight: 700; color: #292524; }
+QCheckBox::indicator { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid #e7cfb8; background: #ffffff; }
+QCheckBox::indicator:hover { border-color: #f97316; }
+QCheckBox::indicator:checked { background: #f97316; border-color: #ea580c; }
+QLabel#grupo { font-size: 11px; font-weight: 800; letter-spacing: 2px; color: #ea580c; padding-left: 2px; }
+QFrame#operacao { background: #ffffff; border: 1px solid #f5e6d8; border-radius: 14px; }
+QFrame#operacao:hover { background: #fff3e6; border: 1px solid #f97316; }
+QFrame#operacao[indisp="true"] { background: #fbf6f0; border: 1px dashed #ecdccb; }
+QFrame#operacao[indisp="true"]:hover { background: #fbf6f0; border: 1px dashed #d9c3ac; }
+QLabel#opTitulo { background: transparent; font-weight: 800; font-size: 13px; color: #1c1917; }
+QLabel#opDesc { background: transparent; font-size: 12px; color: #78716c; }
+QLabel#opTag { background: #ffedd5; color: #c2410c; border-radius: 7px; padding: 2px 7px; font-size: 9px; font-weight: 800; letter-spacing: 1px; }
+QFrame#operacao[indisp="true"] QLabel#opTitulo { color: #b8a898; }
+QFrame#operacao[indisp="true"] QLabel#opDesc { color: #c9bcae; }
+QFrame#operacao[indisp="true"] QLabel#opTag { background: #f3eadf; color: #c9bcae; }
+
+/* ---------- canvas: ferramentas flutuantes ---------- */
+QFrame#flutuante { background: rgba(255,255,255,245); border: 1px solid #fde4cc; border-radius: 14px; }
+QToolButton#flutuanteBtn { background: transparent; border: none; border-radius: 10px; padding: 7px; }
+QToolButton#flutuanteBtn:hover { background: #ffedd5; }
+QToolButton#flutuanteBtn:pressed { background: #fed7aa; }
+
+/* ---------- botoes ---------- */
+QPushButton { background: #ffffff; border: 1px solid #f1dfcf; border-radius: 10px; padding: 8px 16px; color: #44403c; font-weight: 700; }
+QPushButton:hover { background: #fff1e3; border-color: #fdba74; color: #9a3412; }
+QPushButton:pressed { background: #ffedd5; }
+QPushButton:disabled { color: #c9bcae; background: #faf4ed; border-color: #f3e8dc; }
+QPushButton#primario { background: #f97316; border: 1px solid #ea580c; color: #ffffff; font-weight: 800; padding: 10px 18px; }
+QPushButton#primario:hover { background: #ea580c; color: #ffffff; }
+QPushButton#primario:pressed { background: #c2410c; }
+QPushButton#icone { background: #ffffff; border: 1px solid #f1dfcf; border-radius: 19px; padding: 0; }
+QPushButton#icone:hover { background: #fff1e3; border-color: #fdba74; }
+QPushButton#icone:disabled { background: #faf4ed; border-color: #f3e8dc; }
+QPushButton#play { background: #f97316; border: none; border-radius: 21px; padding: 0; }
+QPushButton#play:hover { background: #ea580c; }
+
+/* ---------- passo a passo ---------- */
+QFrame#barraPassos { background: #ffffff; border-top: 1px solid #f5e6d8; }
+QLabel#passoTitulo { font-size: 14px; font-weight: 800; color: #9a3412; }
+QLabel#contador { background: #ffedd5; color: #c2410c; border-radius: 10px; padding: 3px 12px; font-weight: 800; }
+QSlider::groove:horizontal { height: 6px; background: #f5e6d8; border-radius: 3px; }
+QSlider::sub-page:horizontal { background: #f97316; border-radius: 3px; }
+QSlider::handle:horizontal { width: 16px; height: 16px; margin: -6px 0; border-radius: 9px; background: #ffffff; border: 3px solid #f97316; }
+QSlider::handle:horizontal:hover { border-color: #c2410c; }
+
+/* ---------- abas e tabela ---------- */
+QTabWidget::pane { border: none; border-top: 1px solid #f5e6d8; background: #ffffff; }
+QTabBar { background: #ffffff; }
+QTabBar::tab { background: transparent; color: #a8998a; padding: 10px 22px; border: none; font-weight: 700; }
+QTabBar::tab:hover { color: #ea580c; }
+QTabBar::tab:selected { color: #1c1917; border-bottom: 3px solid #f97316; }
+QPlainTextEdit { font-family: "JetBrains Mono", "DejaVu Sans Mono", "Consolas", monospace; font-size: 12px; }
+QPlainTextEdit, QTableWidget { background: #ffffff; border: none; color: #292524; selection-background-color: #fdba74; selection-color: #1c1917; gridline-color: #f5e6d8; padding: 6px; }
+QHeaderView::section { background: #fff8f1; color: #c2410c; border: none; border-right: 1px solid #f5e6d8; border-bottom: 1px solid #f5e6d8; padding: 5px; font-weight: 800; }
+QTableCornerButton::section { background: #fff8f1; border: none; }
+QSplitter::handle { background: #f5e6d8; }
+QSplitter::handle:hover { background: #fdba74; }
+
+/* ---------- barras de rolagem ---------- */
+QScrollBar:vertical { background: transparent; width: 10px; margin: 2px; }
+QScrollBar::handle:vertical { background: #fdba74; border-radius: 4px; min-height: 30px; }
+QScrollBar::handle:vertical:hover { background: #f97316; }
+QScrollBar:horizontal { background: transparent; height: 10px; margin: 2px; }
+QScrollBar::handle:horizontal { background: #fdba74; border-radius: 4px; min-width: 30px; }
+QScrollBar::add-line, QScrollBar::sub-line { height: 0; width: 0; }
+QScrollBar::add-page, QScrollBar::sub-page { background: transparent; }
+
+/* ---------- menus e dialogos ---------- */
+QMenu { background: #ffffff; border: 1px solid #fed7aa; border-radius: 12px; padding: 6px; }
+QMenu::item { padding: 8px 24px; border-radius: 7px; }
+QMenu::item:selected { background: #f97316; color: #ffffff; }
+QMenu::item:disabled { color: #ea580c; font-weight: 800; }
+QMenu::separator { height: 1px; background: #f5e6d8; margin: 5px 8px; }
+QDialog, QMessageBox, QInputDialog { background: #fff8f1; }
+QLabel#dlgTitulo { font-size: 17px; font-weight: 800; color: #1c1917; }
+QLabel#dlgDesc { color: #78716c; }
+QLabel#dlgDestaque { font-size: 22px; font-weight: 800; color: #ea580c; }
+QSpinBox { background: #ffffff; border: 1px solid #f1dfcf; border-radius: 10px; padding: 8px 10px; selection-background-color: #fdba74; font-weight: 700; }
+QSpinBox:focus { border: 1.5px solid #f97316; }
+QCheckBox::indicator:checked { image: url(%1); }
 )";
+        return css.arg(caminhoCheck);
     }
 
     // -------------------------------------------------------
@@ -794,7 +1522,16 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
         canvas->g = g.get();
         canvas->n = n;
         canvas->dirigido = dirigido;
-        estatistica->setText(QString("%1 vertices  |  %2 arestas  |  %3").arg(n).arg(contarArestas()).arg(dirigido ? "Dirigido" : "Nao dirigido"));
+        canvas->arestasTotal = contarArestas();
+        canvas->resetarHover();
+        canvas->btnExemplo->setVisible(n == 0);
+        canvas->flutuante->setVisible(n > 0);
+        if (n > 0)
+        {
+            canvas->flutuante->adjustSize();
+            canvas->flutuante->move(canvas->width() - canvas->flutuante->width() - 16, 16);
+        }
+
         tabela->setRowCount(n);
         tabela->setColumnCount(n);
         QStringList nomes;
@@ -806,22 +1543,65 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
             for (int j = 0; j < n; ++j)
             {
                 int w = g->custo_conexao(i + 1, j + 1);
-                auto item = new QTableWidgetItem(w > 0 ? QString::number(w) : "-");
+                auto item = new QTableWidgetItem(w > 0 ? QString::number(w) : "·");
                 item->setTextAlignment(Qt::AlignCenter);
                 if (w > 0)
                 {
-                    item->setBackground(QColor("#312e81"));
-                    item->setForeground(QColor("#ffffff"));
+                    item->setBackground(QColor("#ffedd5"));
+                    item->setForeground(QColor("#9a3412"));
+                    QFont f = item->font();
+                    f.setBold(true);
+                    item->setFont(f);
                 }
                 else
-                    item->setForeground(QColor("#475569"));
+                    item->setForeground(QColor("#d6c7b8"));
                 tabela->setItem(i, j, item);
             }
+        atualizarDisponibilidade();
         canvas->update();
+    }
+
+    // Motivo pelo qual a operacao nao pode ser executada agora ("" = disponivel).
+    QString motivoIndisponivel(Op op) const
+    {
+        const OpInfo &oi = info(op);
+        if (n == 0)
+            return "crie ao menos um vértice na área de desenho.";
+        if (dirigido && oi.soNaoDirigido)
+            return "requer um grafo não dirigido.";
+        if (op == Op::Caixeiro)
+        {
+            if (n < 2)
+                return "requer ao menos 2 vértices.";
+            if (!grafoCompleto())
+                return "requer um grafo completo: todos os pares de vértices conectados.";
+        }
+        return QString();
+    }
+
+    void atualizarDisponibilidade()
+    {
+        for (auto &it : itens)
+            it.cartao->definirIndisponivel(motivoIndisponivel(it.op));
+    }
+
+    void filtrar(const QString &texto)
+    {
+        QString t = texto.trimmed().toLower();
+        QMap<QLabel *, int> visiveis;
+        for (auto &it : itens)
+        {
+            bool mostrar = t.isEmpty() || it.busca.contains(t);
+            it.cartao->setVisible(mostrar);
+            visiveis[it.grupo] += mostrar ? 1 : 0;
+        }
+        for (auto it = visiveis.begin(); it != visiveis.end(); ++it)
+            it.key()->setVisible(it.value() > 0);
     }
 
     void limparResultado(bool limparTexto)
     {
+        pararPlay();
         passos.clear();
         passoAtual = -1;
         barraPassos->hide();
@@ -836,6 +1616,27 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
         QMessageBox::information(this, titulo, texto);
     }
 
+    void mostrarAjuda()
+    {
+        QMessageBox caixa(this);
+        caixa.setWindowTitle("Como usar o Grafos Studio");
+        caixa.setIconPixmap(criarLogo(56));
+        caixa.setTextFormat(Qt::RichText);
+        caixa.setText(
+            "<h3 style='color:#1c1917'>Como usar</h3>"
+            "<table cellspacing='6'>"
+            "<tr><td><b style='color:#ea580c'>Criar vértice</b></td><td>clique no espaço vazio</td></tr>"
+            "<tr><td><b style='color:#ea580c'>Conectar</b></td><td>clique em um vértice e depois em outro</td></tr>"
+            "<tr><td><b style='color:#ea580c'>Mover</b></td><td>arraste um vértice</td></tr>"
+            "<tr><td><b style='color:#ea580c'>Editar custo</b></td><td>duplo clique na aresta</td></tr>"
+            "<tr><td><b style='color:#ea580c'>Mais opções</b></td><td>botão direito em vértice ou aresta</td></tr>"
+            "<tr><td><b style='color:#ea580c'>Cancelar conexão</b></td><td>Esc</td></tr>"
+            "<tr><td><b style='color:#ea580c'>Passo a passo</b></td><td>← → navegam, Espaço reproduz</td></tr>"
+            "<tr><td><b style='color:#ea580c'>Arquivo</b></td><td>Ctrl+N novo · Ctrl+O abrir · Ctrl+S salvar</td></tr>"
+            "</table>");
+        caixa.exec();
+    }
+
     // -------------------------------------------------------
     // Edicao do grafo
     // -------------------------------------------------------
@@ -843,7 +1644,7 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
     {
         if (n >= 100)
         {
-            aviso("Limite atingido", "A interface suporta no maximo 100 vertices.");
+            aviso("Limite atingido", "A interface suporta no máximo 100 vértices.");
             return;
         }
         limparResultado(false);
@@ -851,6 +1652,7 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
         ++n;
         canvas->pos.append(p);
         atualizar();
+        canvas->animarCriacao(n - 1);
     }
 
     void removerVertice(int v)
@@ -859,18 +1661,55 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
         g->remove_vertice(v + 1);
         --n;
         canvas->pos.removeAt(v);
+        canvas->animarCriacao(-1);
         atualizar();
+    }
+
+    // Dialogo de custo com pre-visualizacao da conexao.
+    bool pedirCusto(int a, int b, int atual, int &custo)
+    {
+        QDialog dlg(this);
+        dlg.setWindowTitle(atual > 0 ? "Editar conexão" : "Nova conexão");
+        dlg.setMinimumWidth(360);
+        auto v = new QVBoxLayout(&dlg);
+        v->setContentsMargins(24, 22, 24, 20);
+        v->setSpacing(10);
+        auto titulo = new QLabel(atual > 0 ? "Editar custo da conexão" : "Nova conexão");
+        titulo->setObjectName("dlgTitulo");
+        QString seta = dirigido ? "  →  " : "  —  ";
+        auto destaque = new QLabel(QString("%1%2%3").arg(a + 1).arg(seta).arg(b + 1));
+        destaque->setObjectName("dlgDestaque");
+        auto desc = new QLabel("Informe o custo (de 1 a 254). Ele é usado por Dijkstra, A* e pelo caixeiro viajante.");
+        desc->setObjectName("dlgDesc");
+        desc->setWordWrap(true);
+        auto spin = new QSpinBox;
+        spin->setRange(1, 254);
+        spin->setValue(atual > 0 ? atual : 1);
+        spin->selectAll();
+        auto botoes = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+        botoes->button(QDialogButtonBox::Ok)->setText("Salvar");
+        botoes->button(QDialogButtonBox::Ok)->setObjectName("primario");
+        botoes->button(QDialogButtonBox::Cancel)->setText("Cancelar");
+        v->addWidget(titulo);
+        v->addWidget(destaque);
+        v->addWidget(desc);
+        v->addSpacing(4);
+        v->addWidget(spin);
+        v->addSpacing(8);
+        v->addWidget(botoes);
+        connect(botoes, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+        connect(botoes, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+        if (dlg.exec() != QDialog::Accepted)
+            return false;
+        custo = spin->value();
+        return true;
     }
 
     void conectar(int a, int b)
     {
         int atual = g->custo_conexao(a + 1, b + 1);
-        bool ok = false;
-        QString seta = dirigido ? " -> " : " - ";
-        int custo = QInputDialog::getInt(this, atual > 0 ? "Editar conexao" : "Nova conexao",
-                                         QString("Custo da conexao %1%2%3 (1 a 254):").arg(a + 1).arg(seta).arg(b + 1),
-                                         atual > 0 ? atual : 1, 1, 254, 1, &ok);
-        if (!ok)
+        int custo = 1;
+        if (!pedirCusto(a, b, atual, custo))
             return;
         limparResultado(false);
         if (atual > 0)
@@ -889,15 +1728,19 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
     void menuVertice(int v, QPoint onde)
     {
         QMenu menu(this);
-        auto cab = menu.addAction(QString("Vertice %1").arg(v + 1));
+        auto cab = menu.addAction(QString("Vértice %1").arg(v + 1));
         cab->setEnabled(false);
         menu.addSeparator();
-        auto remover = menu.addAction("Remover vertice");
+        auto remover = menu.addAction("Remover vértice");
         menu.addSeparator();
         QMap<QAction *, Op> mapa;
         for (const auto &info : operacoes)
             if (info.inicio)
-                mapa[menu.addAction("Iniciar aqui: " + info.nome)] = info.op;
+            {
+                auto act = menu.addAction("Iniciar aqui: " + info.nome);
+                act->setEnabled(motivoIndisponivel(info.op).isEmpty());
+                mapa[act] = info.op;
+            }
         QAction *escolhida = menu.exec(onde);
         if (!escolhida)
             return;
@@ -910,7 +1753,7 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
     void menuAresta(int a, int b, QPoint onde)
     {
         QMenu menu(this);
-        QString seta = dirigido ? " -> " : " - ";
+        QString seta = dirigido ? " → " : " — ";
         auto cab = menu.addAction(QString("Aresta %1%2%3  (custo %4)").arg(a + 1).arg(seta).arg(b + 1).arg(g->custo_conexao(a + 1, b + 1)));
         cab->setEnabled(false);
         menu.addSeparator();
@@ -928,7 +1771,7 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
         if (n == 0)
             return;
         QPointF centro(canvas->width() / 2.0, canvas->height() / 2.0);
-        double r = qMax(40.0, qMin(canvas->width(), canvas->height()) / 2.0 - 70);
+        double r = qMax(40.0, qMin(canvas->width(), canvas->height()) / 2.0 - 90);
         for (int i = 0; i < n; ++i)
         {
             double ang = 6.283185307 * i / n - 1.5707963;
@@ -944,6 +1787,25 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
         substituirGrafo(std::make_unique<grafo>(), 0, dirigido);
     }
 
+    // Grafo completo K5 com custos variados: bom para testar o caixeiro viajante.
+    void carregarExemplo()
+    {
+        auto novo = std::make_unique<grafo>();
+        novo->inicializa_grafo(5, false);
+        for (int i = 1; i <= 5; ++i)
+            for (int j = i + 1; j <= 5; ++j)
+                novo->cria_conexao(i, j, 1 + (i * 7 + j * 3) % 9);
+        substituirGrafo(std::move(novo), 5, false);
+        canvas->mostrarToast("Exemplo carregado: grafo completo com 5 vértices");
+    }
+
+    void definirSeletorTipo(bool dir)
+    {
+        QSignalBlocker b1(btnDirigido), b2(btnNaoDirigido);
+        btnDirigido->setChecked(dir);
+        btnNaoDirigido->setChecked(!dir);
+    }
+
     void substituirGrafo(std::unique_ptr<grafo> novo, int vertices, bool dir)
     {
         limparResultado(true);
@@ -955,8 +1817,8 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
         canvas->g = g.get();
         canvas->n = n;
         canvas->dirigido = dir;
-        QSignalBlocker bloqueio(acaoDirigido);
-        acaoDirigido->setChecked(dir);
+        canvas->animarCriacao(-1);
+        definirSeletorTipo(dir);
         organizarCirculo();
         atualizar();
     }
@@ -1000,14 +1862,14 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
         QFile arquivo(caminho);
         if (!arquivo.open(QIODevice::ReadOnly | QIODevice::Text))
         {
-            QMessageBox::warning(this, "Erro", "Nao foi possivel abrir o arquivo.");
+            QMessageBox::warning(this, "Erro", "Não foi possível abrir o arquivo.");
             return;
         }
         std::istringstream dados(arquivo.readAll().toStdString());
         int vertices, tipo;
         if (!(dados >> vertices >> tipo) || vertices < 0 || vertices > 100 || (tipo != 0 && tipo != 1))
         {
-            QMessageBox::warning(this, "Arquivo invalido", "Primeira linha: quantidade de vertices (0 a 100) e tipo (0 nao dirigido, 1 dirigido).");
+            QMessageBox::warning(this, "Arquivo inválido", "Primeira linha: quantidade de vértices (0 a 100) e tipo (0 não dirigido, 1 dirigido).");
             return;
         }
         auto novo = std::make_unique<grafo>();
@@ -1020,7 +1882,7 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
             int a, b, peso;
             if (!(dados >> a >> b >> peso) || !novo->vertice_valido(a) || !novo->vertice_valido(b) || peso < 1 || peso > 254)
             {
-                QMessageBox::warning(this, "Arquivo invalido", "Cada conexao deve conter: origem destino custo (1 a 254).");
+                QMessageBox::warning(this, "Arquivo inválido", "Cada conexão deve conter: origem destino custo (1 a 254).");
                 return;
             }
             if (novo->custo_conexao(a, b) > 0)
@@ -1029,6 +1891,7 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
         }
         substituirGrafo(std::move(novo), vertices, tipo == 1);
         saida->setPlainText("Grafo importado: " + caminho);
+        canvas->mostrarToast("Grafo aberto: " + QFileInfo(caminho).fileName());
     }
 
     void salvarArquivo()
@@ -1039,7 +1902,7 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
         QFile arquivo(caminho);
         if (!arquivo.open(QIODevice::WriteOnly | QIODevice::Text))
         {
-            QMessageBox::warning(this, "Erro", "Nao foi possivel salvar o arquivo.");
+            QMessageBox::warning(this, "Erro", "Não foi possível salvar o arquivo.");
             return;
         }
         QTextStream out(&arquivo);
@@ -1051,7 +1914,7 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
                 if (w > 0)
                     out << i + 1 << " " << j + 1 << " " << w << "\n";
             }
-        statusBar()->showMessage("Grafo salvo em " + caminho, 5000);
+        canvas->mostrarToast("Grafo salvo: " + QFileInfo(caminho).fileName());
     }
 
     // -------------------------------------------------------
@@ -1073,20 +1936,42 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
             return true;
         QDialog dialogo(this);
         dialogo.setWindowTitle(oi.nome);
-        auto campos = new QFormLayout(&dialogo);
+        dialogo.setMinimumWidth(380);
+        auto v = new QVBoxLayout(&dialogo);
+        v->setContentsMargins(24, 22, 24, 20);
+        v->setSpacing(10);
+        auto titulo = new QLabel(oi.nome);
+        titulo->setObjectName("dlgTitulo");
+        auto desc = new QLabel(oi.dica);
+        desc->setObjectName("dlgDesc");
+        desc->setWordWrap(true);
+        v->addWidget(titulo);
+        v->addWidget(desc);
+        auto campos = new QFormLayout;
+        campos->setVerticalSpacing(10);
         QSpinBox sa, sb;
         sa.setRange(1, n);
         sb.setRange(1, n);
         sa.setValue(a > 0 ? a : 1);
         sb.setValue(n);
         if (pedeInicio)
-            campos->addRow("Vertice inicial", &sa);
+            campos->addRow("Vértice inicial", &sa);
         if (oi.fim)
-            campos->addRow("Vertice destino", &sb);
+            campos->addRow("Vértice destino", &sb);
+        v->addLayout(campos);
         if (oi.op == Op::AEstrela)
-            campos->addRow(new QLabel("A* usa heuristica zero nesta versao."));
+        {
+            auto nota = new QLabel("Nesta versão o A* usa heurística zero (equivale a Dijkstra até o destino).");
+            nota->setObjectName("dlgDesc");
+            nota->setWordWrap(true);
+            v->addWidget(nota);
+        }
+        v->addSpacing(6);
         auto botoes = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-        campos->addRow(botoes);
+        botoes->button(QDialogButtonBox::Ok)->setText("Executar");
+        botoes->button(QDialogButtonBox::Ok)->setObjectName("primario");
+        botoes->button(QDialogButtonBox::Cancel)->setText("Cancelar");
+        v->addWidget(botoes);
         connect(botoes, &QDialogButtonBox::accepted, &dialogo, &QDialog::accept);
         connect(botoes, &QDialogButtonBox::rejected, &dialogo, &QDialog::reject);
         if (dialogo.exec() != QDialog::Accepted)
@@ -1109,33 +1994,18 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
     void acionarOperacao(Op op, int inicio = 0)
     {
         const OpInfo &oi = info(op);
-        if (n == 0)
+        QString motivo = motivoIndisponivel(op);
+        if (!motivo.isEmpty())
         {
-            aviso("Grafo vazio", "Crie ao menos um vertice clicando na area de desenho.");
+            motivo[0] = motivo[0].toUpper();
+            aviso(oi.nome, motivo);
             return;
-        }
-        if (dirigido && oi.soNaoDirigido)
-        {
-            aviso("Operacao indisponivel", "Esta operacao requer um grafo nao dirigido.");
-            return;
-        }
-        if (op == Op::Caixeiro)
-        {
-            if (n < 2)
-            {
-                aviso("Caixeiro viajante", "O grafo precisa ter ao menos 2 vertices.");
-                return;
-            }
-            if (!grafoCompleto())
-            {
-                aviso("Caixeiro viajante", "A heuristica requer um grafo completo: todos os pares de vertices precisam estar conectados.");
-                return;
-            }
         }
         int a = inicio, b = 0;
         if (!pedirVertices(oi, a, b))
             return;
         limparResultado(false);
+        abas->setCurrentIndex(0);
         if (modoPassos->isChecked() && oi.passos)
             gerarPassos(op, a, b);
         else
@@ -1158,7 +2028,37 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
         return QString::fromStdString(resultado.str());
     }
 
-    static QColor corDaClasse(int c) { return QColor::fromHsv((c - 1) * 137 % 360, 135, 245); }
+    static QColor corDaClasse(int c) { return QColor::fromHsv((c - 1) * 137 % 360, 190, 225); }
+
+    static Legenda legendaPadrao()
+    {
+        return {{kAberto, "Descoberto"}, {kAtual, "Atual"}, {kFechado, "Processado"}, {kCaminho, "Caminho"}};
+    }
+
+    // Vertices alcancaveis (direto: seguindo as arestas; inverso: contra elas).
+    QVector<bool> alcancaveis(int origem, bool inverso, std::set<Par> *arvore = nullptr) const
+    {
+        QVector<bool> vis(n, false);
+        QList<int> fila;
+        vis[origem] = true;
+        fila.append(origem);
+        while (!fila.isEmpty())
+        {
+            int v = fila.takeFirst();
+            for (int u = 0; u < n; ++u)
+            {
+                int peso = inverso ? g->custo_conexao(u + 1, v + 1) : g->custo_conexao(v + 1, u + 1);
+                if (peso > 0 && !vis[u])
+                {
+                    vis[u] = true;
+                    fila.append(u);
+                    if (arvore)
+                        arvore->insert(inverso ? par(u + 1, v + 1, dirigido) : par(v + 1, u + 1, dirigido));
+                }
+            }
+        }
+        return vis;
+    }
 
     void executarDireto(Op op, int a, int b)
     {
@@ -1190,11 +2090,19 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
         {
             QRegularExpression padrao("Vertice\\s+(\\d+):\\s+cor\\s+(\\d+)");
             auto it = padrao.globalMatch(texto);
+            QSet<int> classes;
             while (it.hasNext())
             {
                 auto m = it.next();
-                d.cores[m.captured(1).toInt()] = corDaClasse(m.captured(2).toInt());
+                int cls = m.captured(2).toInt();
+                d.cores[m.captured(1).toInt()] = corDaClasse(cls);
+                classes.insert(cls);
             }
+            QList<int> ordenadas = classes.values();
+            std::sort(ordenadas.begin(), ordenadas.end());
+            for (int c : ordenadas)
+                if (d.legenda.size() < 8)
+                    d.legenda.append({corDaClasse(c), QString("Cor %1").arg(c)});
         }
         else if (op == Op::Caixeiro)
         {
@@ -1206,6 +2114,53 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
                     d.arestas.insert(par(caminho[k], caminho[k + 1], dirigido));
             }
             d.cores[a] = kAtual;
+            d.legenda = {{kAtual, "Início"}, {kCaminho, "Percurso"}};
+        }
+        else if (op == Op::FechoDireto || op == Op::FechoInverso)
+        {
+            bool inverso = op == Op::FechoInverso;
+            QVector<bool> vis = alcancaveis(a - 1, inverso, &d.arestas);
+            for (int v = 0; v < n; ++v)
+                if (vis[v])
+                    d.cores[v + 1] = kFechado;
+            d.cores[a] = kAtual;
+            d.legenda = {{kAtual, "Origem"}, {kFechado, inverso ? "Alcança a origem" : "Alcançável"}};
+        }
+        else if (op == Op::Componentes)
+        {
+            // fechamento transitivo (n <= 100): mesma classe quando ha caminho nos dois sentidos
+            QVector<QVector<bool>> alc(n);
+            for (int v = 0; v < n; ++v)
+                alc[v] = alcancaveis(v, false);
+            QVector<int> classe(n, 0);
+            int total = 0;
+            for (int v = 0; v < n; ++v)
+                if (!classe[v])
+                {
+                    ++total;
+                    for (int u = 0; u < n; ++u)
+                        if (alc[v][u] && alc[u][v])
+                            classe[u] = total;
+                }
+            for (int v = 0; v < n; ++v)
+                d.cores[v + 1] = corDaClasse(classe[v]);
+            for (int c = 1; c <= total && c <= 8; ++c)
+                d.legenda.append({corDaClasse(c), QString("Componente %1").arg(c)});
+        }
+        else if (op == Op::Ciclo3)
+        {
+            for (int i = 0; i < n; ++i)
+                for (int j = i + 1; j < n; ++j)
+                    for (int k = j + 1; k < n; ++k)
+                        if (d.cores.isEmpty() && g->custo_conexao(i + 1, j + 1) > 0 && g->custo_conexao(j + 1, k + 1) > 0 && g->custo_conexao(i + 1, k + 1) > 0)
+                        {
+                            d.cores[i + 1] = d.cores[j + 1] = d.cores[k + 1] = kAtual;
+                            d.arestas.insert(par(i + 1, j + 1, dirigido));
+                            d.arestas.insert(par(j + 1, k + 1, dirigido));
+                            d.arestas.insert(par(i + 1, k + 1, dirigido));
+                        }
+            if (!d.cores.isEmpty())
+                d.legenda = {{kAtual, "Triângulo encontrado"}};
         }
         canvas->destaque = d;
         saida->setPlainText(texto);
@@ -1227,6 +2182,29 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
     // -------------------------------------------------------
     // Passo a passo
     // -------------------------------------------------------
+    void pararPlay()
+    {
+        if (relogioPlay && relogioPlay->isActive())
+            relogioPlay->stop();
+        if (btnPlay)
+            btnPlay->setIcon(icone(Ico::Play, QColor("#ffffff"), 20));
+    }
+
+    void alternarPlay()
+    {
+        if (passos.isEmpty())
+            return;
+        if (relogioPlay->isActive())
+        {
+            pararPlay();
+            return;
+        }
+        if (passoAtual + 1 >= passos.size())
+            irParaPasso(0);
+        btnPlay->setIcon(icone(Ico::Pause, QColor("#ffffff"), 20));
+        relogioPlay->start(kIntervalos[velocidade]);
+    }
+
     void irParaPasso(int i)
     {
         if (i < 0 || i >= passos.size())
@@ -1234,7 +2212,13 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
         passoAtual = i;
         canvas->destaque = passos[i].destaque;
         saida->setPlainText(passos[i].texto);
-        rotuloPasso->setText(QString("Passo %1 de %2").arg(i + 1).arg(passos.size()));
+        rotuloPasso->setText(passos[i].texto.section('\n', 0, 0));
+        contadorPasso->setText(QString("%1 / %2").arg(i + 1).arg(passos.size()));
+        {
+            QSignalBlocker bloqueio(controlePasso);
+            controlePasso->setRange(0, passos.size() - 1);
+            controlePasso->setValue(i);
+        }
         btnAnterior->setEnabled(i > 0);
         btnProximo->setEnabled(i + 1 < passos.size());
         btnReiniciar->setEnabled(i > 0);
@@ -1245,9 +2229,10 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
     void gerarPassos(Op op, int inicio, int fim)
     {
         Destaque d;
+        d.legenda = legendaPadrao();
         QVector<Passo> lista;
         auto registrar = [&](const QString &texto) { lista.append({d, texto}); };
-        registrar("Estado inicial.\nAmarelo: descoberto  |  laranja: atual  |  verde: processado.");
+        registrar("Estado inicial.\nAmarelo: descoberto  |  marrom: atual  |  verde: processado.");
 
         if (op == Op::BFS || op == Op::DFS)
         {
@@ -1260,7 +2245,7 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
                 if (bfs)
                     visitado[raiz] = true;
                 d.cores[raiz + 1] = kAberto;
-                registrar(QString("Descobrir vertice %1.").arg(raiz + 1));
+                registrar(QString("Descobrir vértice %1.").arg(raiz + 1));
                 while (!pendentes.isEmpty())
                 {
                     Par item = bfs ? pendentes.takeFirst() : pendentes.takeLast();
@@ -1296,10 +2281,11 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
             for (int v = 0; v < n; ++v)
                 if (!visitado[v])
                     componente(v);
-            registrar("Percurso concluido: " + percurso.join(" -> "));
+            registrar("Percurso concluído: " + percurso.join(" -> "));
         }
         else if (op == Op::Coloracao)
         {
+            d.legenda.clear();
             QVector<int> cor(n, 0), grau(n, 0);
             bool laco = false;
             for (int v = 0; v < n && !laco; ++v)
@@ -1311,7 +2297,7 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
                         ++grau[v];
             }
             if (laco)
-                registrar("Grafo com laco: coloracao propria impossivel.");
+                registrar("Grafo com laço: coloração própria impossível.");
             else
             {
                 for (int k = 0; k < n; ++k)
@@ -1331,7 +2317,7 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
                             }
                         }
                     d.cores[melhor + 1] = kAtual;
-                    registrar(QString("Selecionar %1: saturacao %2, grau %3.").arg(melhor + 1).arg(sat).arg(grau[melhor]));
+                    registrar(QString("Selecionar %1: saturação %2, grau %3.").arg(melhor + 1).arg(sat).arg(grau[melhor]));
                     QSet<int> usadas;
                     for (int u = 0; u < n; ++u)
                         if (g->custo_conexao(melhor + 1, u + 1) > 0 && cor[u])
@@ -1341,9 +2327,15 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
                         ++c;
                     cor[melhor] = c;
                     d.cores[melhor + 1] = corDaClasse(c);
-                    registrar(QString("Atribuir cor %1 ao vertice %2.").arg(c).arg(melhor + 1));
+                    bool nova = true;
+                    for (const auto &l : d.legenda)
+                        if (l.first == corDaClasse(c))
+                            nova = false;
+                    if (nova && d.legenda.size() < 8)
+                        d.legenda.append({corDaClasse(c), QString("Cor %1").arg(c)});
+                    registrar(QString("Atribuir cor %1 ao vértice %2.").arg(c).arg(melhor + 1));
                 }
-                registrar("Coloracao concluida.");
+                registrar("Coloração concluída.");
             }
         }
         else if (op == Op::Dijkstra || op == Op::AEstrela)
@@ -1356,7 +2348,7 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
             anterior[inicio - 1] = inicio - 1;
             auto rotular = [&] {
                 for (int v = 0; v < n; ++v)
-                    d.rotulos[v + 1] = distancia[v] == infinito ? QString("inf") : QString("d=%1").arg(distancia[v]);
+                    d.rotulos[v + 1] = distancia[v] == infinito ? QString("∞") : QString("d=%1").arg(distancia[v]);
             };
             auto tabelaTexto = [&] {
                 QString t = "\nVertice | Custo | Antecessor\n";
@@ -1366,7 +2358,7 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
             };
             rotular();
             d.cores[inicio] = kAberto;
-            registrar((dij ? "Dijkstra: iniciar custos (limite original: 254)." : "A*: h=0 para todos os vertices.") + tabelaTexto());
+            registrar((dij ? "Dijkstra: iniciar custos (limite original: 254)." : "A*: h=0 para todos os vértices.") + tabelaTexto());
             bool achou = false;
             for (int k = 0; k < n; ++k)
             {
@@ -1377,7 +2369,7 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
                 if (v == -1)
                     break;
                 d.cores[v + 1] = kAtual;
-                registrar(QString("Selecionar vertice %1 de menor custo.").arg(v + 1) + tabelaTexto());
+                registrar(QString("Selecionar vértice %1 de menor custo.").arg(v + 1) + tabelaTexto());
                 if (!dij && v == fim - 1)
                 {
                     d.arestas.clear();
@@ -1411,21 +2403,22 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
                     }
                 }
                 d.cores[v + 1] = kFechado;
-                registrar(QString("Fechar vertice %1.").arg(v + 1) + tabelaTexto());
+                registrar(QString("Fechar vértice %1.").arg(v + 1) + tabelaTexto());
             }
             if (!dij && !achou)
-                registrar("Destino inalcancavel." + tabelaTexto());
+                registrar("Destino inalcançável." + tabelaTexto());
             else if (dij)
-                registrar("Busca concluida." + tabelaTexto());
+                registrar("Busca concluída." + tabelaTexto());
         }
         else if (op == Op::Caixeiro)
         {
+            d.legenda = {{kAtual, "Atual"}, {kAberto, "Próximo"}, {kCaminho, "Percorrido"}};
             // O percurso vem da propria funcao da biblioteca; os passos apenas o revelam.
             QString texto = capturar([&] { g->caixeiro_viajante_VADJPROX(inicio); });
             QVector<int> caminho = lerCaminho(texto);
             int acumulado = 0;
             d.cores[inicio] = kAtual;
-            registrar(QString("Partir do vertice %1.").arg(inicio));
+            registrar(QString("Partir do vértice %1.").arg(inicio));
             for (int k = 1; k < caminho.size(); ++k)
             {
                 int custoAresta = g->custo_conexao(caminho[k - 1], caminho[k]);
@@ -1434,25 +2427,59 @@ QToolTip { background: #111a2e; color: #e2e8f0; border: 1px solid #334155; paddi
                 d.cores[caminho[k]] = (k + 1 == caminho.size()) ? kAtual : kAberto;
                 d.arestas.insert(par(caminho[k - 1], caminho[k], dirigido));
                 QString texto2 = (k + 1 == caminho.size())
-                                     ? QString("Voltar ao vertice inicial %1 (custo %2).").arg(caminho[k]).arg(custoAresta)
-                                     : QString("Vizinho mais proximo de %1: vertice %2 (custo %3).").arg(caminho[k - 1]).arg(caminho[k]).arg(custoAresta);
+                                     ? QString("Voltar ao vértice inicial %1 (custo %2).").arg(caminho[k]).arg(custoAresta)
+                                     : QString("Vizinho mais próximo de %1: vértice %2 (custo %3).").arg(caminho[k - 1]).arg(caminho[k]).arg(custoAresta);
                 d.rotulos[caminho[k]] = QString("+%1").arg(custoAresta);
                 registrar(texto2 + QString("\nCusto acumulado: %1").arg(acumulado));
             }
-            registrar("Ciclo concluido.\n" + texto);
+            registrar("Ciclo concluído.\n" + texto);
         }
 
         passos = lista;
         irParaPasso(0);
     }
+
+    // Uso interno: captura de tela para conferir o visual (--captura arquivo.png).
+    void prepararDemonstracao()
+    {
+        carregarExemplo();
+        gerarPassos(Op::Dijkstra, 1, 0);
+        irParaPasso(7);
+    }
 };
+
+constexpr int JanelaPrincipal::kIntervalos[4];
 } // namespace
 
 int main(int argc, char **argv)
 {
     QApplication app(argc, argv);
     app.setStyle("Fusion");
+    app.setApplicationName("Grafos Studio");
     JanelaPrincipal janela;
     janela.show();
+
+    QString captura;
+    bool demo = false, vazio = false;
+    for (int i = 1; i < argc; ++i)
+    {
+        QString a = argv[i];
+        if (a == "--captura" && i + 1 < argc)
+            captura = argv[++i];
+        else if (a == "--demo")
+            demo = true;
+        else if (a == "--vazio")
+            vazio = true;
+    }
+    if (!captura.isEmpty())
+    {
+        if (demo)
+            janela.prepararDemonstracao();
+        QTimer::singleShot(600, [&] {
+            janela.grab().save(captura);
+            app.quit();
+        });
+        Q_UNUSED(vazio);
+    }
     return app.exec();
 }
