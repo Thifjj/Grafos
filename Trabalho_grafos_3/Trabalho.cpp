@@ -55,6 +55,7 @@ int main()
         cout << "16 - Verificar limites de Euler para planaridade" << endl;
         cout << "17 - Calcular areas" << endl;
         cout << "18 - Caixeiro viajante (vertice adjacente mais proximo)" << endl;
+        cout << "19 - Caminho critico (cria um novo grafo de atividades)" << endl;
         cout << "0  - Sair" << endl;
 
         cout << "\nEscolha uma opcao: ";
@@ -645,6 +646,22 @@ int main()
                 break;
             }
             g.caixeiro_viajante_VADJPROX(vertice);
+            atualizarJanela();
+            system_pause();
+            limpar_tela();
+            break;
+        }
+
+        // ==========================================
+        // CAMINHO CRITICO
+        // ==========================================
+        case 19:
+        {
+            // a funcao pede as atividades e recria o grafo (dirigido) com elas
+            g.caminho_critico();
+            nos = g.get_nos();
+            grafo_criado = nos > 0;
+            eh_dirigido = true;
             atualizarJanela();
             system_pause();
             limpar_tela();

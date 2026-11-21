@@ -37,13 +37,23 @@ const QColor kTextoSuave("#78716c");
 using Legenda = QVector<QPair<QColor, QString>>;
 
 // Estado visual de um passo: cores dos vertices, arestas em destaque e rotulos.
+// Tempos de uma atividade no caminho critico (mostrados ao redor do vertice).
+struct DadosCpm
+{
+    int duracao = 0;
+    int inicioCedo = 0, fimCedo = 0;
+    int inicioTarde = 0, fimTarde = 0;
+    int folga = 0;
+};
+
 struct Destaque
 {
     QMap<int, QColor> cores;    // vertice (base 1) -> cor
     std::set<Par> arestas;      // arestas em destaque (base 1)
     QMap<int, QString> rotulos; // texto exibido abaixo do vertice
+    QMap<int, DadosCpm> cpm;    // vertice (base 1) -> tempos do caminho critico
     Legenda legenda;            // explicacao das cores
-    bool vazio() const { return cores.isEmpty() && arestas.empty() && rotulos.isEmpty(); }
+    bool vazio() const { return cores.isEmpty() && arestas.empty() && rotulos.isEmpty() && cpm.isEmpty(); }
 };
 
 // ---------- icones desenhados em codigo (sem arquivos externos) ----------
@@ -862,6 +872,27 @@ private:
             p.setPen(cor.lightness() > 150 ? QColor("#292524") : QColor("#ffffff"));
             p.drawText(QRectF(c.x() - r, c.y() - r, r * 2, r * 2), Qt::AlignCenter, QString::number(i + 1));
 
+            // caminho critico: duracao no alto; inicio/fim mais cedo em cima,
+            // mais tarde embaixo; folga abaixo do vertice
+            if (destaque.cpm.contains(i + 1))
+            {
+                const DadosCpm &d = destaque.cpm[i + 1];
+                QFont ft = fonte(10, true);
+                p.setFont(ft);
+                const QColor vermelho("#dc2626");
+                auto escrever = [&](QPointF centro, const QString &t, const QColor &cor) {
+                    p.setPen(cor);
+                    p.drawText(QRectF(centro.x() - 40, centro.y() - 9, 80, 18), Qt::AlignCenter, t);
+                };
+                const double dx = raio + 9, dy = raio * 0.8;
+                escrever(c + QPointF(0, -raio - 12), QString::number(d.duracao), QColor("#292524"));
+                escrever(c + QPointF(-dx, -dy), QString::number(d.inicioCedo), vermelho);
+                escrever(c + QPointF(dx, -dy), QString::number(d.fimCedo), vermelho);
+                escrever(c + QPointF(-dx, dy), QString::number(d.inicioTarde), vermelho);
+                escrever(c + QPointF(dx, dy), QString::number(d.fimTarde), vermelho);
+                escrever(c + QPointF(0, raio + 14), QString("Folga: %1").arg(d.folga), d.folga == 0 ? QColor("#1d4ed8") : QColor("#15803d"));
+            }
+
             QString rotulo = destaque.rotulos.value(i + 1);
             if (!rotulo.isEmpty())
             {
@@ -951,7 +982,8 @@ enum class Op
     BFS, DFS, FechoDireto, FechoInverso, Componentes,
     Dijkstra, AEstrela,
     Coloracao, Ciclo3, Euler, Areas,
-    Caixeiro
+    Caixeiro,
+    CaminhoCritico
 };
 
 struct OpInfo
@@ -1039,6 +1071,7 @@ struct JanelaPrincipal : QMainWindow
             {Op::Euler, "Limites de Euler (planaridade)", "Verifica os limites de Euler para planaridade.", false, false, true, false},
             {Op::Areas, "Áreas do grafo", "Calcula as áreas (faces) do grafo.", false, false, true, false},
             {Op::Caixeiro, "Vizinho mais próximo", "Heurística do caixeiro viajante (grafo completo, não dirigido).", true, false, true, true},
+            {Op::CaminhoCritico, "Caminho crítico (CPM)", "Tempos mais cedo/mais tarde e folgas. Arestas = precedências (grafo dirigido).", false, false, false, false},
         };
 
         construirInterface();
@@ -1183,6 +1216,7 @@ struct JanelaPrincipal : QMainWindow
         grupo("Caminhos mínimos", {Op::Dijkstra, Op::AEstrela});
         grupo("Propriedades", {Op::Coloracao, Op::Ciclo3, Op::Euler, Op::Areas});
         grupo("Caixeiro viajante", {Op::Caixeiro});
+        grupo("Planejamento", {Op::CaminhoCritico});
         lv->addStretch();
 
         auto scroll = new QScrollArea;
@@ -1569,6 +1603,8 @@ QCheckBox::indicator:checked { image: url(%1); }
             return "crie ao menos um vértice na área de desenho.";
         if (dirigido && oi.soNaoDirigido)
             return "requer um grafo não dirigido.";
+        if (op == Op::CaminhoCritico && !dirigido)
+            return "requer um grafo dirigido: cada aresta A→B indica que A precede B.";
         if (op == Op::Caixeiro)
         {
             if (n < 2)
@@ -2060,8 +2096,108 @@ QCheckBox::indicator:checked { image: url(%1); }
         return vis;
     }
 
+    // Pede a duracao de cada atividade (vertice). O valor inicial e o custo dos arcos
+    // que saem do vertice (convencao da biblioteca: arco guarda a duracao da origem).
+    bool pedirDuracoes(QVector<int> &duracao)
+    {
+        QDialog dialogo(this);
+        dialogo.setWindowTitle("Caminho crítico");
+        dialogo.setMinimumWidth(380);
+        auto v = new QVBoxLayout(&dialogo);
+        v->setContentsMargins(24, 22, 24, 20);
+        v->setSpacing(10);
+        auto titulo = new QLabel("Duração das atividades");
+        titulo->setObjectName("dlgTitulo");
+        auto desc = new QLabel("Cada vértice é uma atividade e cada aresta A→B indica que A precisa terminar antes de B.");
+        desc->setObjectName("dlgDesc");
+        desc->setWordWrap(true);
+        v->addWidget(titulo);
+        v->addWidget(desc);
+
+        auto conteudo = new QWidget;
+        auto campos = new QFormLayout(conteudo);
+        campos->setVerticalSpacing(8);
+        QVector<QSpinBox *> caixas;
+        for (int i = 0; i < n; ++i)
+        {
+            int inicial = 1;
+            for (int j = 0; j < n; ++j)
+                inicial = qMax(inicial, g->custo_conexao(i + 1, j + 1));
+            auto caixa = new QSpinBox;
+            caixa->setRange(1, 9999);
+            caixa->setValue(inicial);
+            campos->addRow(QString("Atividade %1").arg(i + 1), caixa);
+            caixas.append(caixa);
+        }
+        auto rolagem = new QScrollArea;
+        rolagem->setWidget(conteudo);
+        rolagem->setWidgetResizable(true);
+        rolagem->setFrameShape(QFrame::NoFrame);
+        rolagem->setMaximumHeight(360);
+        v->addWidget(rolagem);
+
+        auto botoes = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+        botoes->button(QDialogButtonBox::Ok)->setText("Calcular");
+        botoes->button(QDialogButtonBox::Ok)->setObjectName("primario");
+        botoes->button(QDialogButtonBox::Cancel)->setText("Cancelar");
+        v->addWidget(botoes);
+        connect(botoes, &QDialogButtonBox::accepted, &dialogo, &QDialog::accept);
+        connect(botoes, &QDialogButtonBox::rejected, &dialogo, &QDialog::reject);
+        if (dialogo.exec() != QDialog::Accepted)
+            return false;
+        duracao.resize(n);
+        for (int i = 0; i < n; ++i)
+            duracao[i] = caixas[i]->value();
+        return true;
+    }
+
+    // Caminho critico: o calculo e feito pela biblioteca (calcula_tempos_criticos).
+    void executarCaminhoCritico()
+    {
+        QVector<int> duracao;
+        if (!pedirDuracoes(duracao))
+            return;
+        QVector<int> ic(n), fc(n), it(n), ft(n), folga(n), ordem(n);
+        int total = 0;
+        if (!g->calcula_tempos_criticos(duracao.data(), ic.data(), fc.data(), it.data(), ft.data(), folga.data(), ordem.data(), total))
+        {
+            aviso("Caminho crítico", "As precedências formam um ciclo; não é possível calcular o caminho crítico.");
+            return;
+        }
+
+        Destaque d;
+        QString texto = "Atividade\tDur\tIC\tFC\tIT\tFT\tFolga\tCrítica\n";
+        for (int i = 0; i < n; ++i)
+        {
+            d.cpm[i + 1] = {duracao[i], ic[i], fc[i], it[i], ft[i], folga[i]};
+            if (folga[i] == 0)
+                d.cores[i + 1] = kCaminho;
+            texto += QString("%1\t%2\t%3\t%4\t%5\t%6\t%7\t%8\n").arg(i + 1).arg(duracao[i]).arg(ic[i]).arg(fc[i]).arg(it[i]).arg(ft[i]).arg(folga[i]).arg(folga[i] == 0 ? "SIM" : "-");
+        }
+        // arco critico: os dois extremos sem folga e a precedente termina logo antes do inicio
+        for (int j = 0; j < n; ++j)
+            for (int i = 0; i < n; ++i)
+                if (g->custo_conexao(j + 1, i + 1) > 0 && folga[j] == 0 && folga[i] == 0 && fc[j] + 1 == ic[i])
+                    d.arestas.insert(par(j + 1, i + 1, true));
+        QStringList criticas;
+        for (int k = 0; k < n; ++k)
+            if (folga[ordem[k]] == 0)
+                criticas << QString::number(ordem[k] + 1);
+        texto += QString("\nCaminho crítico: %1\nDuração total do projeto: %2").arg(criticas.join(" -> ")).arg(total);
+        texto += "\n\nNo grafo: duração em cima, início/fim mais cedo (acima) e mais tarde (abaixo).";
+        d.legenda = {{kCaminho, "Atividade crítica (folga 0)"}, {kVerticePadrao, "Atividade com folga"}};
+        canvas->destaque = d;
+        saida->setPlainText(texto);
+        canvas->update();
+    }
+
     void executarDireto(Op op, int a, int b)
     {
+        if (op == Op::CaminhoCritico)
+        {
+            executarCaminhoCritico();
+            return;
+        }
         QString texto = capturar([&] {
             switch (op)
             {
@@ -2083,6 +2219,7 @@ QCheckBox::indicator:checked { image: url(%1); }
                 break;
             case Op::Areas: g->areas_grafo(); break;
             case Op::Caixeiro: g->caixeiro_viajante_VADJPROX(a); break;
+            case Op::CaminhoCritico: break; // tratado em executarCaminhoCritico
             }
         });
         Destaque d;
