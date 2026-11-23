@@ -55,7 +55,7 @@ int main()
         cout << "16 - Verificar limites de Euler para planaridade" << endl;
         cout << "17 - Calcular areas" << endl;
         cout << "18 - Caixeiro viajante (vertice adjacente mais proximo)" << endl;
-        cout << "19 - Caminho critico (cria um novo grafo de atividades)" << endl;
+        cout << "19 - Caminho critico (grafo atual, 1 inicio e 1 fim)" << endl;
         cout << "0  - Sair" << endl;
 
         cout << "\nEscolha uma opcao: ";
@@ -625,12 +625,16 @@ int main()
             // A heuristica exige aresta entre todos os pares de vertices.
             bool completo = true;
             for (int i = 1; i <= nos && completo; i++)
+            {
                 for (int j = 1; j <= nos; j++)
+                {
                     if (i != j && g.custo_conexao(i, j) <= 0)
                     {
                         completo = false;
                         break;
                     }
+                }
+            }
             if (!completo)
             {
                 cout << "O grafo precisa ser completo (todos os pares de vertices conectados)." << endl;
@@ -657,12 +661,24 @@ int main()
         // ==========================================
         case 19:
         {
-            // a funcao pede as atividades e recria o grafo (dirigido) com elas
-            g.caminho_critico();
-            nos = g.get_nos();
-            grafo_criado = nos > 0;
-            eh_dirigido = true;
-            atualizarJanela();
+            if (!grafo_criado || !eh_dirigido)
+            {
+                cout << "Crie antes um grafo dirigido (arco A->B = A precede B)!" << endl;
+                break;
+            }
+            int *custo = new int[nos];
+            for (int i = 0; i < nos; i++)
+            {
+                cout << "Duracao do vertice " << i + 1 << ": ";
+                cin >> custo[i];
+            }
+            int inicial, fim;
+            cout << "Vertice inicial: ";
+            cin >> inicial;
+            cout << "Vertice final: ";
+            cin >> fim;
+            g.caminho_critico_manual(inicial, fim, custo);
+            delete[] custo;
             system_pause();
             limpar_tela();
             break;

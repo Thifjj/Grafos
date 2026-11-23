@@ -156,7 +156,9 @@ QPixmap criarLogo(int tam)
     p.setPen(Qt::NoPen);
     p.setBrush(Qt::white);
     for (const QPointF &q : {a, b, c})
+    {
         p.drawEllipse(q, tam * .095, tam * .095);
+    }
     return pm;
 }
 
@@ -234,8 +236,10 @@ public:
     int verticeEm(const QPointF &p) const
     {
         for (int i = n - 1; i >= 0; --i)
+        {
             if (QLineF(p, pos[i]).length() <= raio + 2)
                 return i;
+        }
         return -1;
     }
 
@@ -260,6 +264,7 @@ public:
     bool arestaEm(const QPointF &p, int &ai, int &aj) const
     {
         for (int i = 0; i < n; ++i)
+        {
             for (int j = 0; j < n; ++j)
             {
                 if (g->custo_conexao(i + 1, j + 1) <= 0 || (!dirigido && j < i))
@@ -281,6 +286,7 @@ public:
                     return true;
                 }
             }
+        }
         return false;
     }
 
@@ -437,8 +443,12 @@ protected:
         p.setPen(Qt::NoPen);
         p.setBrush(QColor(194, 65, 12, 36));
         for (int x = 18; x < width(); x += 28)
+        {
             for (int y = 18; y < height(); y += 28)
+            {
                 p.drawEllipse(QPointF(x, y), 1.1, 1.1);
+            }
+        }
 
         if (n == 0)
         {
@@ -616,7 +626,9 @@ private:
         QFontMetrics fm(f);
         double larg = 0;
         for (const auto &it : destaque.legenda)
+        {
             larg = qMax(larg, double(fm.horizontalAdvance(it.second)));
+        }
         QRectF r(16, 58, larg + 58, 20 + destaque.legenda.size() * 24 + 8);
         sombra(p, r, 14, 10);
         p.setPen(QPen(QColor("#fde4cc"), 1));
@@ -719,11 +731,13 @@ private:
                     caixa.moveCenter(c);
                     bool livre = true;
                     for (const auto &o : ocupados)
+                    {
                         if (o.intersects(caixa))
                         {
                             livre = false;
                             break;
                         }
+                    }
                     if (livre)
                     {
                         centro = c;
@@ -742,6 +756,7 @@ private:
     {
         QVector<Etiqueta> etiquetas;
         for (int i = 0; i < n; ++i)
+        {
             for (int j = 0; j < n; ++j)
             {
                 int peso = g->custo_conexao(i + 1, j + 1);
@@ -798,6 +813,7 @@ private:
                 bool oposta = dirigido && g->custo_conexao(j + 1, i + 1) > 0;
                 etiquetas.append({l, QPointF(), true, oposta ? 0.32 : 0.5, QString::number(peso), cor, forte});
             }
+        }
         desenharEtiquetas(p, etiquetas);
     }
 
@@ -1071,7 +1087,7 @@ struct JanelaPrincipal : QMainWindow
             {Op::Euler, "Limites de Euler (planaridade)", "Verifica os limites de Euler para planaridade.", false, false, true, false},
             {Op::Areas, "Áreas do grafo", "Calcula as áreas (faces) do grafo.", false, false, true, false},
             {Op::Caixeiro, "Vizinho mais próximo", "Heurística do caixeiro viajante (grafo completo, não dirigido).", true, false, true, true},
-            {Op::CaminhoCritico, "Caminho crítico (CPM)", "Tempos mais cedo/mais tarde e folgas. Arestas = precedências (grafo dirigido).", false, false, false, false},
+            {Op::CaminhoCritico, "Caminho crítico (CPM)", "Mesmo cálculo com 1 início e 1 fim; usa as durações informadas (grafo dirigido).", false, false, false, false},
         };
 
         construirInterface();
@@ -1202,7 +1218,9 @@ struct JanelaPrincipal : QMainWindow
             lv->addSpacing(8);
             lv->addWidget(rotulo);
             for (Op op : ops)
+            {
                 for (const auto &info : operacoes)
+                {
                     if (info.op == op)
                     {
                         auto c = new Cartao(info.nome, info.dica, info.passos);
@@ -1211,6 +1229,8 @@ struct JanelaPrincipal : QMainWindow
                         lv->addWidget(c);
                         itens.append({o, c, rotulo, (info.nome + " " + info.dica + " " + nome).toLower()});
                     }
+                }
+            }
         };
         grupo("Percursos", {Op::BFS, Op::DFS, Op::FechoDireto, Op::FechoInverso, Op::Componentes});
         grupo("Caminhos mínimos", {Op::Dijkstra, Op::AEstrela});
@@ -1545,9 +1565,13 @@ QCheckBox::indicator:checked { image: url(%1); }
     {
         int total = 0;
         for (int i = 0; i < n; ++i)
+        {
             for (int j = dirigido ? 0 : i; j < n; ++j)
+            {
                 if (g->custo_conexao(i + 1, j + 1) > 0)
                     ++total;
+            }
+        }
         return total;
     }
 
@@ -1570,10 +1594,13 @@ QCheckBox::indicator:checked { image: url(%1); }
         tabela->setColumnCount(n);
         QStringList nomes;
         for (int i = 0; i < n; ++i)
+        {
             nomes << QString::number(i + 1);
+        }
         tabela->setHorizontalHeaderLabels(nomes);
         tabela->setVerticalHeaderLabels(nomes);
         for (int i = 0; i < n; ++i)
+        {
             for (int j = 0; j < n; ++j)
             {
                 int w = g->custo_conexao(i + 1, j + 1);
@@ -1591,6 +1618,7 @@ QCheckBox::indicator:checked { image: url(%1); }
                     item->setForeground(QColor("#d6c7b8"));
                 tabela->setItem(i, j, item);
             }
+        }
         atualizarDisponibilidade();
         canvas->update();
     }
@@ -1618,7 +1646,9 @@ QCheckBox::indicator:checked { image: url(%1); }
     void atualizarDisponibilidade()
     {
         for (auto &it : itens)
+        {
             it.cartao->definirIndisponivel(motivoIndisponivel(it.op));
+        }
     }
 
     void filtrar(const QString &texto)
@@ -1632,7 +1662,9 @@ QCheckBox::indicator:checked { image: url(%1); }
             visiveis[it.grupo] += mostrar ? 1 : 0;
         }
         for (auto it = visiveis.begin(); it != visiveis.end(); ++it)
+        {
             it.key()->setVisible(it.value() > 0);
+        }
     }
 
     void limparResultado(bool limparTexto)
@@ -1771,12 +1803,14 @@ QCheckBox::indicator:checked { image: url(%1); }
         menu.addSeparator();
         QMap<QAction *, Op> mapa;
         for (const auto &info : operacoes)
+        {
             if (info.inicio)
             {
                 auto act = menu.addAction("Iniciar aqui: " + info.nome);
                 act->setEnabled(motivoIndisponivel(info.op).isEmpty());
                 mapa[act] = info.op;
             }
+        }
         QAction *escolhida = menu.exec(onde);
         if (!escolhida)
             return;
@@ -1829,8 +1863,12 @@ QCheckBox::indicator:checked { image: url(%1); }
         auto novo = std::make_unique<grafo>();
         novo->inicializa_grafo(5, false);
         for (int i = 1; i <= 5; ++i)
+        {
             for (int j = i + 1; j <= 5; ++j)
+            {
                 novo->cria_conexao(i, j, 1 + (i * 7 + j * 3) % 9);
+            }
+        }
         substituirGrafo(std::move(novo), 5, false);
         canvas->mostrarToast("Exemplo carregado: grafo completo com 5 vértices");
     }
@@ -1864,11 +1902,16 @@ QCheckBox::indicator:checked { image: url(%1); }
         auto novo = std::make_unique<grafo>();
         novo->inicializa_grafo(n, novoDirigido);
         for (int i = 0; i < n; ++i)
+        {
             for (int j = 0; j < n; ++j)
             {
                 int w = g->custo_conexao(i + 1, j + 1);
                 if (novoDirigido)
                 {
+                    // vindo de um grafo nao dirigido (aresta simetrica), mantem so um sentido
+                    // (do menor para o maior vertice) para nao duplicar i->j e j->i
+                    if (!dirigido && j < i)
+                        continue;
                     if (w > 0)
                         novo->cria_conexao(i + 1, j + 1, w);
                 }
@@ -1881,6 +1924,7 @@ QCheckBox::indicator:checked { image: url(%1); }
                         novo->cria_conexao(i + 1, j + 1, w2);
                 }
             }
+        }
         limparResultado(true);
         g = std::move(novo);
         dirigido = novoDirigido;
@@ -1944,12 +1988,14 @@ QCheckBox::indicator:checked { image: url(%1); }
         QTextStream out(&arquivo);
         out << n << " " << (dirigido ? 1 : 0) << "\n";
         for (int i = 0; i < n; ++i)
+        {
             for (int j = dirigido ? 0 : i; j < n; ++j)
             {
                 int w = g->custo_conexao(i + 1, j + 1);
                 if (w > 0)
                     out << i + 1 << " " << j + 1 << " " << w << "\n";
             }
+        }
         canvas->mostrarToast("Grafo salvo: " + QFileInfo(caminho).fileName());
     }
 
@@ -1959,8 +2005,10 @@ QCheckBox::indicator:checked { image: url(%1); }
     const OpInfo &info(Op op) const
     {
         for (const auto &i : operacoes)
+        {
             if (i.op == op)
                 return i;
+        }
         return operacoes[0];
     }
 
@@ -2021,9 +2069,13 @@ QCheckBox::indicator:checked { image: url(%1); }
     bool grafoCompleto() const
     {
         for (int i = 1; i <= n; ++i)
+        {
             for (int j = 1; j <= n; ++j)
+            {
                 if (i != j && g->custo_conexao(i, j) <= 0)
                     return false;
+            }
+        }
         return true;
     }
 
@@ -2054,7 +2106,9 @@ QCheckBox::indicator:checked { image: url(%1); }
         std::ostringstream resultado;
         std::string zeros;
         for (int i = 0; i < n + 1; ++i)
+        {
             zeros += "0 ";
+        }
         std::istringstream entrada(zeros);
         auto cout_antigo = cout.rdbuf(resultado.rdbuf());
         auto cin_antigo = cin.rdbuf(entrada.rdbuf());
@@ -2122,7 +2176,9 @@ QCheckBox::indicator:checked { image: url(%1); }
         {
             int inicial = 1;
             for (int j = 0; j < n; ++j)
+            {
                 inicial = qMax(inicial, g->custo_conexao(i + 1, j + 1));
+            }
             auto caixa = new QSpinBox;
             caixa->setRange(1, 9999);
             caixa->setValue(inicial);
@@ -2147,47 +2203,67 @@ QCheckBox::indicator:checked { image: url(%1); }
             return false;
         duracao.resize(n);
         for (int i = 0; i < n; ++i)
+        {
             duracao[i] = caixas[i]->value();
+        }
         return true;
     }
 
-    // Caminho critico: o calculo e feito pela biblioteca (calcula_tempos_criticos).
+    // Caminho critico: o calculo e feito pela biblioteca (caminho_critico_manual).
+    // O grafo tem 1 unico inicio (sem precedentes) e 1 unico fim (sem sucessoras).
     void executarCaminhoCritico()
     {
         QVector<int> duracao;
         if (!pedirDuracoes(duracao))
             return;
-        QVector<int> ic(n), fc(n), it(n), ft(n), folga(n), ordem(n);
-        int total = 0;
-        if (!g->calcula_tempos_criticos(duracao.data(), ic.data(), fc.data(), it.data(), ft.data(), folga.data(), ordem.data(), total))
+        int inicial = -1, fim = -1;
+        for (int i = 1; i <= n; ++i)
         {
-            aviso("Caminho crítico", "As precedências formam um ciclo; não é possível calcular o caminho crítico.");
+            bool semEntrada = true, semSaida = true;
+            for (int j = 1; j <= n; ++j)
+            {
+                if (g->custo_conexao(j, i) > 0) semEntrada = false;
+                if (g->custo_conexao(i, j) > 0) semSaida = false;
+            }
+            if (semEntrada) inicial = i;
+            if (semSaida) fim = i;
+        }
+        if (inicial == -1 || fim == -1)
+        {
+            aviso("Caminho crítico", "É preciso um vértice sem precedentes (início) e um sem sucessores (fim).");
             return;
         }
+        QString texto = capturar([&] { g->caminho_critico_manual(inicial, fim, duracao.data()); });
 
         Destaque d;
-        QString texto = "Atividade\tDur\tIC\tFC\tIT\tFT\tFolga\tCrítica\n";
-        for (int i = 0; i < n; ++i)
+        QVector<int> caminho;
+        QRegularExpression padraoCaminho("Caminho critico:\\s*(.*)");
+        auto mc = padraoCaminho.match(texto);
+        if (mc.hasMatch())
+            for (const QString &parte : mc.captured(1).split("->"))
+            {
+                caminho.append(parte.trimmed().toInt());
+            }
+        // linhas da tabela: vertice, dur, ES, EF, LS, LF, folga, critico
+        for (const QString &linha : texto.split('\n'))
         {
-            d.cpm[i + 1] = {duracao[i], ic[i], fc[i], it[i], ft[i], folga[i]};
-            if (folga[i] == 0)
-                d.cores[i + 1] = kCaminho;
-            texto += QString("%1\t%2\t%3\t%4\t%5\t%6\t%7\t%8\n").arg(i + 1).arg(duracao[i]).arg(ic[i]).arg(fc[i]).arg(it[i]).arg(ft[i]).arg(folga[i]).arg(folga[i] == 0 ? "SIM" : "-");
+            QStringList c = linha.split('\t');
+            if (c.size() < 8) continue;
+            bool ok = false;
+            int v = c[0].toInt(&ok);
+            if (!ok) continue;
+            int folga = c[6].toInt();
+            d.cpm[v] = {c[1].toInt(), c[2].toInt(), c[3].toInt(), c[4].toInt(), c[5].toInt(), folga};
+            if (folga == 0)
+                d.cores[v] = kCaminho;
         }
-        // arco critico: os dois extremos sem folga e a precedente termina logo antes do inicio
-        for (int j = 0; j < n; ++j)
-            for (int i = 0; i < n; ++i)
-                if (g->custo_conexao(j + 1, i + 1) > 0 && folga[j] == 0 && folga[i] == 0 && fc[j] + 1 == ic[i])
-                    d.arestas.insert(par(j + 1, i + 1, true));
-        QStringList criticas;
-        for (int k = 0; k < n; ++k)
-            if (folga[ordem[k]] == 0)
-                criticas << QString::number(ordem[k] + 1);
-        texto += QString("\nCaminho crítico: %1\nDuração total do projeto: %2").arg(criticas.join(" -> ")).arg(total);
-        texto += "\n\nNo grafo: duração em cima, início/fim mais cedo (acima) e mais tarde (abaixo).";
+        for (int k = 0; k + 1 < caminho.size(); ++k)
+        {
+            d.arestas.insert(par(caminho[k], caminho[k + 1], true));
+        }
         d.legenda = {{kCaminho, "Atividade crítica (folga 0)"}, {kVerticePadrao, "Atividade com folga"}};
         canvas->destaque = d;
-        saida->setPlainText(texto);
+        saida->setPlainText(texto + "\nNo grafo: duração em cima, início/fim mais cedo (acima) e mais tarde (abaixo).");
         canvas->update();
     }
 
@@ -2238,8 +2314,10 @@ QCheckBox::indicator:checked { image: url(%1); }
             QList<int> ordenadas = classes.values();
             std::sort(ordenadas.begin(), ordenadas.end());
             for (int c : ordenadas)
+            {
                 if (d.legenda.size() < 8)
                     d.legenda.append({corDaClasse(c), QString("Cor %1").arg(c)});
+            }
         }
         else if (op == Op::Caixeiro)
         {
@@ -2258,8 +2336,10 @@ QCheckBox::indicator:checked { image: url(%1); }
             bool inverso = op == Op::FechoInverso;
             QVector<bool> vis = alcancaveis(a - 1, inverso, &d.arestas);
             for (int v = 0; v < n; ++v)
+            {
                 if (vis[v])
                     d.cores[v + 1] = kFechado;
+            }
             d.cores[a] = kAtual;
             d.legenda = {{kAtual, "Origem"}, {kFechado, inverso ? "Alcança a origem" : "Alcançável"}};
         }
@@ -2268,27 +2348,40 @@ QCheckBox::indicator:checked { image: url(%1); }
             // fechamento transitivo (n <= 100): mesma classe quando ha caminho nos dois sentidos
             QVector<QVector<bool>> alc(n);
             for (int v = 0; v < n; ++v)
+            {
                 alc[v] = alcancaveis(v, false);
+            }
             QVector<int> classe(n, 0);
             int total = 0;
             for (int v = 0; v < n; ++v)
+            {
                 if (!classe[v])
                 {
                     ++total;
                     for (int u = 0; u < n; ++u)
+                    {
                         if (alc[v][u] && alc[u][v])
                             classe[u] = total;
+                    }
                 }
+            }
             for (int v = 0; v < n; ++v)
+            {
                 d.cores[v + 1] = corDaClasse(classe[v]);
+            }
             for (int c = 1; c <= total && c <= 8; ++c)
+            {
                 d.legenda.append({corDaClasse(c), QString("Componente %1").arg(c)});
+            }
         }
         else if (op == Op::Ciclo3)
         {
             for (int i = 0; i < n; ++i)
+            {
                 for (int j = i + 1; j < n; ++j)
+                {
                     for (int k = j + 1; k < n; ++k)
+                    {
                         if (d.cores.isEmpty() && g->custo_conexao(i + 1, j + 1) > 0 && g->custo_conexao(j + 1, k + 1) > 0 && g->custo_conexao(i + 1, k + 1) > 0)
                         {
                             d.cores[i + 1] = d.cores[j + 1] = d.cores[k + 1] = kAtual;
@@ -2296,6 +2389,9 @@ QCheckBox::indicator:checked { image: url(%1); }
                             d.arestas.insert(par(j + 1, k + 1, dirigido));
                             d.arestas.insert(par(i + 1, k + 1, dirigido));
                         }
+                    }
+                }
+            }
             if (!d.cores.isEmpty())
                 d.legenda = {{kAtual, "Triângulo encontrado"}};
         }
@@ -2312,7 +2408,9 @@ QCheckBox::indicator:checked { image: url(%1); }
         if (!m.hasMatch())
             return caminho;
         for (const QString &parte : m.captured(1).split("->"))
+        {
             caminho.append(parte.trimmed().toInt());
+        }
         return caminho;
     }
 
@@ -2416,8 +2514,10 @@ QCheckBox::indicator:checked { image: url(%1); }
             };
             componente(inicio - 1);
             for (int v = 0; v < n; ++v)
+            {
                 if (!visitado[v])
                     componente(v);
+            }
             registrar("Percurso concluído: " + percurso.join(" -> "));
         }
         else if (op == Op::Coloracao)
@@ -2430,8 +2530,10 @@ QCheckBox::indicator:checked { image: url(%1); }
                 if (g->custo_conexao(v + 1, v + 1) > 0)
                     laco = true;
                 for (int u = 0; u < n; ++u)
+                {
                     if (g->custo_conexao(v + 1, u + 1) > 0)
                         ++grau[v];
+                }
             }
             if (laco)
                 registrar("Grafo com laço: coloração própria impossível.");
@@ -2441,24 +2543,30 @@ QCheckBox::indicator:checked { image: url(%1); }
                 {
                     int melhor = -1, sat = -1;
                     for (int v = 0; v < n; ++v)
+                    {
                         if (!cor[v])
                         {
                             QSet<int> vizinhas;
                             for (int u = 0; u < n; ++u)
+                            {
                                 if (g->custo_conexao(v + 1, u + 1) > 0 && cor[u])
                                     vizinhas.insert(cor[u]);
+                            }
                             if (melhor == -1 || vizinhas.size() > sat || (vizinhas.size() == sat && grau[v] > grau[melhor]))
                             {
                                 melhor = v;
                                 sat = vizinhas.size();
                             }
                         }
+                    }
                     d.cores[melhor + 1] = kAtual;
                     registrar(QString("Selecionar %1: saturação %2, grau %3.").arg(melhor + 1).arg(sat).arg(grau[melhor]));
                     QSet<int> usadas;
                     for (int u = 0; u < n; ++u)
+                    {
                         if (g->custo_conexao(melhor + 1, u + 1) > 0 && cor[u])
                             usadas.insert(cor[u]);
+                    }
                     int c = 1;
                     while (usadas.contains(c))
                         ++c;
@@ -2466,8 +2574,10 @@ QCheckBox::indicator:checked { image: url(%1); }
                     d.cores[melhor + 1] = corDaClasse(c);
                     bool nova = true;
                     for (const auto &l : d.legenda)
+                    {
                         if (l.first == corDaClasse(c))
                             nova = false;
+                    }
                     if (nova && d.legenda.size() < 8)
                         d.legenda.append({corDaClasse(c), QString("Cor %1").arg(c)});
                     registrar(QString("Atribuir cor %1 ao vértice %2.").arg(c).arg(melhor + 1));
@@ -2485,12 +2595,16 @@ QCheckBox::indicator:checked { image: url(%1); }
             anterior[inicio - 1] = inicio - 1;
             auto rotular = [&] {
                 for (int v = 0; v < n; ++v)
+                {
                     d.rotulos[v + 1] = distancia[v] == infinito ? QString("∞") : QString("d=%1").arg(distancia[v]);
+                }
             };
             auto tabelaTexto = [&] {
                 QString t = "\nVertice | Custo | Antecessor\n";
                 for (int v = 0; v < n; ++v)
+                {
                     t += QString("%1 | %2 | %3\n").arg(v + 1).arg(distancia[v] == infinito ? "inf" : QString::number(distancia[v])).arg(anterior[v] < 0 ? "-" : QString::number(anterior[v] + 1));
+                }
                 return t;
             };
             rotular();
@@ -2501,8 +2615,10 @@ QCheckBox::indicator:checked { image: url(%1); }
             {
                 int v = -1;
                 for (int u = 0; u < n; ++u)
+                {
                     if (!pronto[u] && distancia[u] < infinito && (v == -1 || distancia[u] < distancia[v]))
                         v = u;
+                }
                 if (v == -1)
                     break;
                 d.cores[v + 1] = kAtual;

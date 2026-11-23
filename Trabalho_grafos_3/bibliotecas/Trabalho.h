@@ -152,7 +152,7 @@ public:
         return matriz_adjacencia[a - 1][b - 1];
     }
 
-    // quantidade atual de vertices (usado pelos menus apos caminho_critico recriar o grafo)
+    // quantidade atual de vertices (usado pelos menus )
     int get_nos() const
     {
         return this->nos;
@@ -162,7 +162,9 @@ public:
     ~grafo()
     {
         for (int i = 0; i < nos; i++)
+        {
             delete[] matriz_adjacencia[i];
+        }
         delete[] matriz_adjacencia;
     }
 
@@ -854,7 +856,9 @@ public:
 
         cout << "   ";
         for (int i = 0; i < nos; i++)
+        {
             cout << i + 1 << " ";
+        }
 
         cout << endl;
 
@@ -1026,7 +1030,9 @@ public:
         // ADICIONADO: antes as cores eram descartadas sem mostrar resultado.
         cout << "Coloracao do grafo:" << endl;
         for (int i = 0; i < this->nos; i++)
+        {
             cout << "Vertice " << i + 1 << ": cor " << cor[i] << endl;
+        }
     }
 
     void busca_djikstra(int inicial)
@@ -1355,218 +1361,99 @@ public:
         cout << "Custo total: " << custo_total << endl;
     }
 
-    // Calcula os tempos do caminho critico usando a matriz de adjacencia:
-    // existe arco j -> i quando a atividade j e precedente da atividade i.
-    // O vetor duracao tem uma posicao por vertice (indice = vertice - 1).
-    // Os tempos comecam em 1: uma atividade de duracao d que inicia em t termina em t + d - 1.
-    // Retorna false se as precedentes formam um ciclo (nada e calculado).
-    bool calcula_tempos_criticos(const int *duracao, int *inicio_cedo, int *fim_cedo, int *inicio_tarde, int *fim_tarde, int *folga, int *ordem, int &duracao_projeto)
+    /*pert/cpm caminho critico
+    obter:
+    ES - tempo inicial mais cedo
+    EF - tempo final mais cedo
+    LS - tempo inicial mais tarde
+    LF - tempo final mais tarde
+    tempo final da atividade anterior = tempo inicial da atividade prox
+
+    comeca pelo INICIO
+    faz com no 1,2,3,4,5...
+    e custo ja tem na matriz
+    */
+
+    // inicial e fim em base 1; custo[i] = duracao do vertice i+1
+    // supoe grafo dirigido, sem ciclos, com 1 unico inicio e 1 unico fim
+    void caminho_critico_manual(int inicial, int fim, int *custo)
     {
-        int quantidade = this->nos;
-        // ordem topologica (algoritmo de Kahn): uma atividade so entra na ordem
-        // depois que todas as suas precedentes ja entraram.
-        int grau_entrada[quantidade];
-        int qtd_ordem = 0;
+        int n = this->nos;
+        int ini = inicial - 1, fi = fim - 1;
+        int ES[n], EF[n], LS[n], LF[n];
 
-        for (int i = 0; i < quantidade; i++)
+        // IDA: ES = maior EF entre as precedentes
+        for (int i = 0; i < n; i++)
         {
-            grau_entrada[i] = 0;
-            // conta quantas precedentes a atividade i tem (coluna i da matriz)
-            for (int j = 0; j < quantidade; j++)
-            {
-                if (this->matriz_adjacencia[j][i] > 0)
-                    grau_entrada[i]++;
-            }
+            ES[i] = 0;
         }
 
-        // comeca pelas atividades sem precedentes
-        for (int i = 0; i < quantidade; i++)
+        for (int passo = 0; passo < n; passo++)
         {
-            if (grau_entrada[i] == 0)
+            for (int i = 0; i < n; i++)
             {
-                ordem[qtd_ordem] = i;
-                qtd_ordem++;
-            }
-        }
-
-        // qtd_ordem cresce enquanto novas atividades sao liberadas
-        for (int k = 0; k < qtd_ordem; k++)
-        {
-            int atual = ordem[k];
-            for (int j = 0; j < quantidade; j++)
-            {
-                if (this->matriz_adjacencia[atual][j] > 0)
+                EF[i] = ES[i] + custo[i];
+                for (int j = 0; j < n; j++)
                 {
-                    grau_entrada[j]--;
-                    if (grau_entrada[j] == 0)
+                    if (matriz_adjacencia[i][j] > 0 && ES[j] < EF[i])
+                        ES[j] = EF[i];
+                }
+            }
+        }
+        for (int i = 0; i < n; i++)
+        {
+            EF[i] = ES[i] + custo[i];
+        }
+
+        int duracao_total = EF[fi];
+
+        // VOLTA: LF = menor LS entre as sucessoras
+        for (int i = 0; i < n; i++)
+        {
+            LF[i] = duracao_total;
+            LS[i] = LF[i] - custo[i];
+        }
+        for (int passo = 0; passo < n; passo++)
+        {
+            for (int i = 0; i < n; i++)
+            {
+                for (int j = 0; j < n; j++)
+                {
+                    if (matriz_adjacencia[i][j] > 0 && LF[i] > LS[j])
                     {
-                        ordem[qtd_ordem] = j;
-                        qtd_ordem++;
+                        LF[i] = LS[j];
+                        LS[i] = LF[i] - custo[i];
                     }
                 }
             }
         }
-
-        // se alguma atividade ficou de fora, as precedentes formam um ciclo
-        if (qtd_ordem < quantidade)
-            return false;
-
-        // IDA: inicio mais cedo = maior fim mais cedo entre as precedentes + 1 (comeca em 1)
-        duracao_projeto = 0;
-        for (int k = 0; k < quantidade; k++)
+        //////////////////////////////////////////////////////////////////////////
+        cout << "\nVertice\tDur\tES\tEF\tLS\tLF\tFolga\tCritico" << endl;
+        for (int i = 0; i < n; i++)
         {
-            int i = ordem[k];
-            inicio_cedo[i] = 1;
-            for (int j = 0; j < quantidade; j++)
+            int folga = LS[i] - ES[i];
+            cout << i + 1 << "\t" << custo[i] << "\t" << ES[i] << "\t" << EF[i] << "\t"
+                 << LS[i] << "\t" << LF[i] << "\t" << folga << "\t" << (folga == 0 ? "SIM" : "-") << endl;
+        }
+
+        // segue arcos entre vertices criticos (EF[atual] == ES[prox])
+        cout << "\nCaminho critico: " << ini + 1;
+        int atual = ini;
+        while (atual != fi)
+        {
+            int prox = -1;
+            for (int j = 0; j < n && prox == -1; j++)
             {
-                if (this->matriz_adjacencia[j][i] > 0 && fim_cedo[j] + 1 > inicio_cedo[i])
-                    inicio_cedo[i] = fim_cedo[j] + 1;
+                if (matriz_adjacencia[atual][j] > 0 && LS[j] == ES[j] && EF[atual] == ES[j])
+                    prox = j;
             }
-            fim_cedo[i] = inicio_cedo[i] + duracao[i] - 1;
-
-            // a duracao do projeto e o maior fim mais cedo
-            if (fim_cedo[i] > duracao_projeto)
-                duracao_projeto = fim_cedo[i];
-        }
-
-        // VOLTA (ordem inversa): fim mais tarde = menor inicio mais tarde entre as sucessoras - 1
-        for (int k = quantidade - 1; k >= 0; k--)
-        {
-            int i = ordem[k];
-            // sem sucessoras: pode terminar ate o fim do projeto
-            fim_tarde[i] = duracao_projeto;
-            for (int j = 0; j < quantidade; j++)
-            {
-                if (this->matriz_adjacencia[i][j] > 0 && inicio_tarde[j] - 1 < fim_tarde[i])
-                    fim_tarde[i] = inicio_tarde[j] - 1;
-            }
-            inicio_tarde[i] = fim_tarde[i] - duracao[i] + 1;
-
-            // folga: quanto a atividade pode atrasar sem atrasar o projeto
-            folga[i] = inicio_tarde[i] - inicio_cedo[i];
-        }
-        return true;
-    }
-
-    // Prepara a entrada do caminho critico usando a propria matriz de adjacencia:
-    // cada atividade e um vertice (grafo dirigido) e o arco precedente -> atividade
-    // guarda a duracao da precedente. O calculo do caminho critico fica para depois.
-    void caminho_critico()
-    {
-        int quantidade;
-        cout << "Quantidade de atividades: ";
-        cin >> quantidade;
-        if (quantidade < 1)
-        {
-            cout << "Quantidade invalida!" << endl;
-            return;
-        }
-
-        string atividade[quantidade];
-        int duracao[quantidade];
-        // um valor para cada atividade (indice = numero da atividade - 1)
-        int inicio_cedo[quantidade];
-        int inicio_tarde[quantidade];
-        int fim_cedo[quantidade];
-        int fim_tarde[quantidade];
-        int folga[quantidade];
-
-        // nome e duracao de cada atividade
-        for (int i = 0; i < quantidade; i++)
-        {
-            cout << "\nAtividade " << i + 1 << " - nome: ";
-            cin >> atividade[i];
-            cout << "Duracao de " << atividade[i] << " (maior que zero): ";
-            cin >> duracao[i];
-            while (duracao[i] < 1)
-            {
-                cout << "A duracao deve ser maior que zero: ";
-                cin >> duracao[i];
-            }
-        }
-
-        // descarta a matriz anterior, se existir, antes de recriar o grafo
-        for (int i = 0; i < this->nos; i++)
-            delete[] this->matriz_adjacencia[i];
-        delete[] this->matriz_adjacencia;
-        this->matriz_adjacencia = nullptr;
-        this->nos = 0;
-
-        this->inicializa_grafo(quantidade, true);
-
-        // mostra a lista de atividades para o usuario escolher as precedentes pelo numero
-        cout << "\n===== ATIVIDADES =====" << endl;
-        for (int i = 0; i < quantidade; i++)
-        {
-            cout << i + 1 << " - " << atividade[i] << " (duracao " << duracao[i] << ")" << endl;
-        }
-
-        // Precedente = atividade que precisa terminar ANTES da atividade atual comecar.
-        // Para cada atividade, perguntamos quantas precedentes ela tem e quais sao.
-        for (int i = 0; i < quantidade; i++)
-        {
-            int qtd_precedentes;
-            cout << "\nQuantas precedentes tem a atividade " << atividade[i] << "? (0 se nao tiver): ";
-            cin >> qtd_precedentes;
-
-            // repete ate ser um valor possivel (no maximo todas as outras atividades)
-            while (qtd_precedentes < 0 || qtd_precedentes > quantidade - 1)
-            {
-                cout << "Digite um valor entre 0 e " << quantidade - 1 << ": ";
-                cin >> qtd_precedentes;
-            }
-
-            for (int k = 1; k <= qtd_precedentes; k++)
-            {
-                int numero;
-                cout << "Numero da precedente " << k << " de " << atividade[i] << ": ";
-                cin >> numero;
-
-                // o numero precisa existir na lista e nao pode ser a propria atividade
-                while (numero < 1 || numero > quantidade || numero == i + 1)
-                {
-                    cout << "Numero invalido! Digite outro: ";
-                    cin >> numero;
-                }
-
-                // arco: precedente -> atividade atual.
-                // O valor guardado na matriz e a duracao da precedente.
-                this->cria_conexao(numero, i + 1, duracao[numero - 1]);
-            }
-        }
-
-        // ==========================================
-        // CALCULO DO CAMINHO CRITICO
-        // ==========================================
-        // o calculo fica em calcula_tempos_criticos (tambem usado pela interface grafica)
-        int ordem[quantidade];
-        int duracao_projeto;
-        if (!this->calcula_tempos_criticos(duracao, inicio_cedo, fim_cedo, inicio_tarde, fim_tarde, folga, ordem, duracao_projeto))
-        {
-            cout << "\nExiste ciclo nas precedentes! Nao e possivel calcular o caminho critico." << endl;
-            this->mostrar_grafo();
-            return;
-        }
-
-        // resultado: atividades com folga 0 formam o caminho critico
-        cout << "\nAtividade\tDur\tIC\tFC\tIT\tFT\tFolga\tCritica" << endl;
-        for (int i = 0; i < quantidade; i++)
-        {
-            cout << atividade[i] << "\t\t" << duracao[i] << "\t" << inicio_cedo[i] << "\t" << fim_cedo[i] << "\t" << inicio_tarde[i] << "\t" << fim_tarde[i] << "\t" << folga[i] << "\t" << (folga[i] == 0 ? "SIM" : "-") << endl;
-        }
-
-        // mostra as atividades criticas na ordem em que acontecem
-        cout << "\nCaminho critico: ";
-        for (int k = 0; k < quantidade; k++)
-        {
-            int i = ordem[k];
-            if (folga[i] == 0)
-                cout << atividade[i] << " ";
+            if (prox == -1)
+                break;
+            atual = prox;
+            cout << " -> " << atual + 1;
         }
         cout << endl;
-        cout << "Duracao total do projeto: " << duracao_projeto << endl;
-
-        this->mostrar_grafo();
+        cout << "Duracao total: " << duracao_total << endl;
     }
 };
 void system_pause()

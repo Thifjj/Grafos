@@ -1,0 +1,122 @@
+<!doctype html><html lang='pt-BR'><meta charset='utf-8'><meta http-equiv='refresh' content='2'><title>Visualizacao do grafo</title><style>body{font:16px system-ui;background:#eef2f7;color:#172554;margin:30px}main{display:flex;gap:20px}section{background:white;padding:24px;border-radius:15px;flex:1}svg{width:100%;height:550px}pre{white-space:pre-wrap;max-height:550px;overflow:auto}text{font:16px system-ui}</style><h1>Visualizacao do grafo</h1><p>Use o menu do terminal. Esta pagina atualiza automaticamente a cada 2 segundos.</p><main><section>3 vertices | Dirigido<svg viewBox='-300 -300 600 600'><defs><marker id='seta' viewBox='0 0 10 10' refX='10' refY='5' markerWidth='7' markerHeight='7' orient='auto'><path d='M0 0L10 5L0 10' fill='gray'/></marker></defs><line x1='220' y1='0' x2='-90.9474' y2='179.526' stroke='gray' marker-end='url(#seta)'/><text x='64.5263' y='84.7628'>3</text><line x1='-110' y1='190.526' x2='-110' y2='-168.526' stroke='gray' marker-end='url(#seta)'/><text x='-110' y='6'>5</text><circle cx='220' cy='0' r='21' fill='#dbeafe' stroke='#172554'/><text x='220' y='5' text-anchor='middle'>1</text><circle cx='-110' cy='190.526' r='21' fill='#dbeafe' stroke='#172554'/><text x='-110' y='195.526' text-anchor='middle'>2</text><circle cx='-110' cy='-190.526' r='21' fill='#dbeafe' stroke='#172554'/><text x='-110' y='-185.526' text-anchor='middle'>3</text></svg></section><section><h2>Saida do terminal</h2><pre>
+==========================================
+            CRIADOR DE GRAFOS             
+==========================================
+1  - Criar grafo
+2  - Adicionar vertices
+3  - Remover vertice
+4  - Adicionar conexoes
+5  - Remover conexoes
+6  - Mostrar matriz de adjacencia
+7  - Busca em largura (BFS)
+8  - Busca em profundidade (DFS)
+9  - Fecho transitivo direto
+10 - Fecho transitivo inverso
+11 - Verificar conectividade / SFCMs
+12 - Busca de Dijkstra
+13 - Busca A*
+14 - Coloracao (nao dirigido)
+15 - Verificar ciclo de tamanho 3
+16 - Verificar limites de Euler para planaridade
+17 - Calcular areas
+18 - Caixeiro viajante (vertice adjacente mais proximo)
+19 - Caminho critico (grafo atual, 1 inicio e 1 fim)
+0  - Sair
+
+Escolha uma opcao: 
+===== CRIAR NOVO GRAFO =====
+Numero inicial de vertices: O grafo sera dirigido? (s/n): 
+Grafo criado com sucesso!
+Tipo: dirigido
+Vertices: 3
+Pressione enter para continuar...
+==========================================
+            CRIADOR DE GRAFOS             
+==========================================
+1  - Criar grafo
+2  - Adicionar vertices
+3  - Remover vertice
+4  - Adicionar conexoes
+5  - Remover conexoes
+6  - Mostrar matriz de adjacencia
+7  - Busca em largura (BFS)
+8  - Busca em profundidade (DFS)
+9  - Fecho transitivo direto
+10 - Fecho transitivo inverso
+11 - Verificar conectividade / SFCMs
+12 - Busca de Dijkstra
+13 - Busca A*
+14 - Coloracao (nao dirigido)
+15 - Verificar ciclo de tamanho 3
+16 - Verificar limites de Euler para planaridade
+17 - Calcular areas
+18 - Caixeiro viajante (vertice adjacente mais proximo)
+19 - Caminho critico (grafo atual, 1 inicio e 1 fim)
+0  - Sair
+
+Escolha uma opcao: 
+===== ADICIONAR CONEXOES =====
+Formato: ORIGEM -&gt; DESTINO
+Digite -1 como primeiro vertice para voltar ao menu.
+
+Matriz de adjacencia:
+
+   1 2 3 
+1  0 0 0 
+2  0 0 0 
+3  0 0 0 
+
+Primeiro vertice: Segundo vertice: Custo da conexao: Conexao 1 -&gt; 2 criada!
+
+Matriz de adjacencia:
+
+   1 2 3 
+1  0 3 0 
+2  0 0 0 
+3  0 0 0 
+
+Primeiro vertice: Segundo vertice: Custo da conexao: Conexao 2 -&gt; 3 criada!
+
+Matriz de adjacencia:
+
+   1 2 3 
+1  0 3 0 
+2  0 0 5 
+3  0 0 0 
+
+Primeiro vertice: Voltando ao menu...
+Pressione enter para continuar...
+==========================================
+            CRIADOR DE GRAFOS             
+==========================================
+1  - Criar grafo
+2  - Adicionar vertices
+3  - Remover vertice
+4  - Adicionar conexoes
+5  - Remover conexoes
+6  - Mostrar matriz de adjacencia
+7  - Busca em largura (BFS)
+8  - Busca em profundidade (DFS)
+9  - Fecho transitivo direto
+10 - Fecho transitivo inverso
+11 - Verificar conectividade / SFCMs
+12 - Busca de Dijkstra
+13 - Busca A*
+14 - Coloracao (nao dirigido)
+15 - Verificar ciclo de tamanho 3
+16 - Verificar limites de Euler para planaridade
+17 - Calcular areas
+18 - Caixeiro viajante (vertice adjacente mais proximo)
+19 - Caminho critico (grafo atual, 1 inicio e 1 fim)
+0  - Sair
+
+Escolha uma opcao: 
+Duracao do vertice 1: Duracao do vertice 2: Duracao do vertice 3: Vertice inicial: Vertice final: 
+Vertice	Dur	ES	EF	LS	LF	Folga	Critico
+1	5	0	5	0	5	0	SIM
+2	6	5	11	5	11	0	SIM
+3	7	11	18	11	18	0	SIM
+
+Caminho critico: 1 -&gt; 2 -&gt; 3
+Duracao total: 18
+Pressione enter para continuar...</pre></section></main></html>
